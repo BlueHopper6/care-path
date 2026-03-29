@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/carepath/navbar";
 import { OutputCards } from "@/components/carepath/output-cards";
-import { Empty } from "@/components/ui/empty";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -134,21 +134,26 @@ export default function HistoryPage() {
 
           {/* History List */}
           {history.length === 0 ? (
-            <Empty
-              icon={<History className="h-12 w-12" />}
-              title="No analysis history"
-              description={
-                session
-                  ? "Your analyses will appear here after you analyze a document."
-                  : "Your previous analyses will appear here. Start by analyzing a medical document."
-              }
-            >
-              <Link href="/dashboard">
-                <Button className="gap-2">
-                  <FileText className="h-4 w-4" />
-                  Start Analysis
-                </Button>
-              </Link>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <History className="h-6 w-6" />
+                </EmptyMedia>
+                <EmptyTitle>No analysis history</EmptyTitle>
+                <EmptyDescription>
+                  {session
+                    ? "Your analyses will appear here after you analyze a document."
+                    : "Your previous analyses will appear here. Start by analyzing a medical document."}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Link href="/dashboard">
+                  <Button className="gap-2">
+                    <FileText className="h-4 w-4" />
+                    Start Analysis
+                  </Button>
+                </Link>
+              </EmptyContent>
             </Empty>
           ) : (
             <div className="space-y-4">
