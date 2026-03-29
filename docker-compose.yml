@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  care-path-backend:
+    container_name: care-path-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4003:3001"
+    environment:
+      # Use provided Cloudflare tunnel domain for CORS whitelist
+      - FRONTEND_URL=${FRONTEND_URL:-https://paisal.vilohit.dev}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    restart: unless-stopped
+    networks:
+      - carepath-network
+
+  care-path-frontend:
+    container_name: care-path-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Pass NEXT_PUBLIC vars so Next.js can embed them at build time
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://paisal-api.vilohit.dev}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    ports:
+      - "5176:3000"
+    environment:
+      # Fallback runtime variable for Next.js server-side proxy routes
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://paisal-api.vilohit.dev}
+    restart: unless-stopped
+    networks:
+      - carepath-network
+
+networks:
+  carepath-network:
+    driver: bridge
