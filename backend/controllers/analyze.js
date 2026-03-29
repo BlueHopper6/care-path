@@ -81,6 +81,7 @@ async function saveAnalyzedText(req, res) {
           document_id: doc.id,
           summary: analysis.summary,
           action_plan: analysis.action_plan,
+          recurring_tasks: analysis.recurring_tasks || [],
           questions: analysis.questions_for_doctor,
           warnings: analysis.warning_signs,
           confidence_level: analysis.confidence_level,
