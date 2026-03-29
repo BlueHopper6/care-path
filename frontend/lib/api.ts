@@ -7,6 +7,7 @@ export interface AnalyzeRequest {
 export interface AnalyzeResponse {
   summary: string;
   action_plan: string[];
+  recurring_tasks?: { title: string; description: string; frequency: string; rrule?: string }[];
   questions_for_doctor: string[];
   warning_signs: string[];
   confidence_level?: string;
@@ -86,7 +87,8 @@ export async function saveRemoteAnalysis(
   });
 
   if (!response.ok) {
-    throw new Error("Failed to save analysis to history");
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || "Failed to save analysis to history");
   }
 }
 

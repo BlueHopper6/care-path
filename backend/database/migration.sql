@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.analyses (
   document_id      UUID NOT NULL REFERENCES public.documents(id) ON DELETE CASCADE,
   summary          TEXT NOT NULL,
   action_plan      JSONB DEFAULT '[]'::jsonb,
+  recurring_tasks  JSONB DEFAULT '[]'::jsonb,
   questions        JSONB DEFAULT '[]'::jsonb,
   warnings         JSONB DEFAULT '[]'::jsonb,
   confidence_level TEXT CHECK (confidence_level IN ('low', 'medium', 'high')) DEFAULT 'medium',
