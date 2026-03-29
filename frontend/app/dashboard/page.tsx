@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { analyzeText, saveToHistory, type AnalyzeResponse, type AnalyzeRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
+import { ExportButton } from "@/components/carepath/export-button";
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -79,7 +80,10 @@ export default function DashboardPage() {
           {/* Output Section */}
           {result && !isLoading && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Analysis Results</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Analysis Results</h2>
+                <ExportButton result={result} />
+              </div>
               <OutputCards result={result} />
             </div>
           )}

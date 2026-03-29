@@ -23,6 +23,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import Link from "next/link";
+import { ExportButton } from "@/components/carepath/export-button";
 
 export default function HistoryPage() {
   const { session, loading: authLoading } = useAuth();
@@ -196,6 +197,10 @@ export default function HistoryPage() {
 
                     <CollapsibleContent>
                       <CardContent className="border-t pt-6">
+                        <div className="mb-4 flex items-center justify-between">
+                          <h3 className="font-medium text-foreground">Analysis Details</h3>
+                          <ExportButton result={item.result} />
+                        </div>
                         <OutputCards result={item.result} />
                       </CardContent>
                     </CollapsibleContent>
