@@ -73,11 +73,23 @@ Authorization: Bearer <supabase-access-token>
 Content-Type: application/json
 
 {
-  "raw_text": "..."
+  "raw_text": "...",
+  "analysis": { ... },
+  "mode": "default",
+  "language": "English"
 }
 ```
 
-### Upload Document (Authenticated)
+### File Upload & Parsing (Public)
+
+```
+POST /api/parse-file
+Content-Type: multipart/form-data
+
+form-data key: "file" (File blob - PDF or TXT)
+```
+
+### Save Legacy Document (Authenticated)
 
 ```
 POST /api/upload
@@ -86,6 +98,21 @@ Content-Type: application/json
 
 {
   "raw_text": "..."
+}
+```
+
+### User Preferences (Authenticated)
+
+```
+GET /api/preferences
+Authorization: Bearer <supabase-access-token>
+
+PUT /api/preferences
+Authorization: Bearer <supabase-access-token>
+Content-Type: application/json
+
+{
+  "auto_save_history": true
 }
 ```
 
