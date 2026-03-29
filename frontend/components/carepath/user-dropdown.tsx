@@ -52,9 +52,9 @@ export function UserDropdown({ user, onLogout }: UserDropdownProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/dashboard" className="cursor-pointer">
+          <Link href="/analyze" className="cursor-pointer">
             <LayoutDashboard className="mr-2 h-4 w-4" />
-            Dashboard
+            Analyze
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
