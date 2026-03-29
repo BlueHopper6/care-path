@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     const normalized = {
       summary: inner.summary ?? "No summary available.",
       action_plan: Array.isArray(inner.action_plan) ? inner.action_plan : [],
+      recurring_tasks: Array.isArray(inner.recurring_tasks) ? inner.recurring_tasks : [],
       questions_for_doctor: Array.isArray(inner.questions_for_doctor)
         ? inner.questions_for_doctor
         : [],
