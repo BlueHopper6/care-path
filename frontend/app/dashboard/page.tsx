@@ -8,9 +8,10 @@ import { OutputCardsLoader } from "@/components/carepath/loader";
 import { Disclaimer } from "@/components/carepath/disclaimer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { analyzeText, saveToHistory, type AnalyzeResponse, type AnalyzeRequest } from "@/lib/api";
+import { analyzeText, saveToHistory, saveRemoteAnalysis, getPreferences, updatePreferences, type AnalyzeResponse, type AnalyzeRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { ExportButton } from "@/components/carepath/export-button";
+import { SaveConsentDialog } from "@/components/carepath/save-consent-dialog";
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -18,24 +19,70 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const { session } = useAuth();
 
+  // Consent Dialog state
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [consentSaving, setConsentSaving] = useState(false);
+  const [pendingSave, setPendingSave] = useState<{
+    request: AnalyzeRequest;
+    response: AnalyzeResponse;
+  } | null>(null);
+
   const handleSubmit = async (data: AnalyzeRequest) => {
     setIsLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      // Pass the access token so the backend saves to DB for logged-in users
+      // 1. Get the analysis from the API (does not save to DB anymore)
       const accessToken = session?.access_token;
       const response = await analyzeText(data, accessToken);
       setResult(response);
 
-      // Always save to localStorage for quick local access too
+      // 2. Save locally for guest/quick access
       saveToHistory(data, response);
+
+      // 3. Handle authenticated user DB saving logic
+      if (accessToken) {
+        const prefs = await getPreferences(accessToken);
+        if (prefs.auto_save_history) {
+          // Auto-save silently
+          await saveRemoteAnalysis(data, response, accessToken).catch(console.error);
+        } else {
+          // Prompt user for consent
+          setPendingSave({ request: data, response });
+          setConsentOpen(true);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleConsentSave = async (alwaysSave: boolean) => {
+    if (!pendingSave || !session?.access_token) return;
+    setConsentSaving(true);
+    try {
+      // Save this one to history
+      await saveRemoteAnalysis(pendingSave.request, pendingSave.response, session.access_token);
+      
+      // If user checked "Always save automatically", update preferences
+      if (alwaysSave) {
+        await updatePreferences(true, session.access_token);
+      }
+    } catch (err) {
+      console.error("Failed to save via consent dialog:", err);
+    } finally {
+      setConsentSaving(false);
+      setConsentOpen(false);
+      setPendingSave(null);
+    }
+  };
+
+  const handleConsentDontSave = () => {
+    setConsentOpen(false);
+    setPendingSave(null);
   };
 
   return (
@@ -89,6 +136,14 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      <SaveConsentDialog
+        open={consentOpen}
+        onOpenChange={setConsentOpen}
+        onSave={handleConsentSave}
+        onDontSave={handleConsentDontSave}
+        isLoading={consentSaving}
+      />
     </div>
   );
 }
