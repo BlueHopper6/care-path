@@ -24,9 +24,19 @@ export async function POST(request: NextRequest) {
     const normalizedLanguage =
       LANGUAGE_MAP[data.language] ?? data.language ?? "English";
 
+    // Forward the Authorization header so the backend can authenticate
+    // and save the analysis to the database for logged-in users
+    const authHeader = request.headers.get("authorization");
+    const outboundHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (authHeader) {
+      outboundHeaders["Authorization"] = authHeader;
+    }
+
     const response = await fetch(`${apiUrl}/api/analyze`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: outboundHeaders,
       body: JSON.stringify({
         raw_text: data.raw_text,
         mode: normalizedMode,

@@ -9,11 +9,13 @@ import { Disclaimer } from "@/components/carepath/disclaimer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { analyzeText, saveToHistory, type AnalyzeResponse, type AnalyzeRequest } from "@/lib/api";
+import { useAuth } from "@/context/auth";
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { session } = useAuth();
 
   const handleSubmit = async (data: AnalyzeRequest) => {
     setIsLoading(true);
@@ -21,8 +23,12 @@ export default function DashboardPage() {
     setResult(null);
 
     try {
-      const response = await analyzeText(data);
+      // Pass the access token so the backend saves to DB for logged-in users
+      const accessToken = session?.access_token;
+      const response = await analyzeText(data, accessToken);
       setResult(response);
+
+      // Always save to localStorage for quick local access too
       saveToHistory(data, response);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");

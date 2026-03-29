@@ -9,6 +9,8 @@ export interface AnalyzeResponse {
   action_plan: string[];
   questions_for_doctor: string[];
   warning_signs: string[];
+  confidence_level?: string;
+  disclaimer?: string;
 }
 
 export interface AnalysisHistoryItem {
@@ -20,16 +22,34 @@ export interface AnalysisHistoryItem {
   created_at: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+// ---------------------------------------------------------------------------
+// Analyze
+// ---------------------------------------------------------------------------
 
-export async function analyzeText(data: AnalyzeRequest): Promise<AnalyzeResponse> {
-  // Always call the Next.js API route (relative URL) which proxies to the
-  // Express backend and normalizes the response shape.
+/**
+ * Send medical text for analysis.
+ * Always routes through the Next.js API route (/api/analyze) which proxies
+ * to the Express backend and normalises the response.
+ *
+ * @param data        The analysis request payload
+ * @param accessToken Optional Supabase access token — when provided, the
+ *                    backend will persist the result to the database.
+ */
+export async function analyzeText(
+  data: AnalyzeRequest,
+  accessToken?: string
+): Promise<AnalyzeResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(`/api/analyze`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify(data),
   });
 
@@ -41,7 +61,42 @@ export async function analyzeText(data: AnalyzeRequest): Promise<AnalyzeResponse
   return response.json();
 }
 
-// Local storage key for history (temporary until backend history endpoint is available)
+// ---------------------------------------------------------------------------
+// Backend history (authenticated users)
+// ---------------------------------------------------------------------------
+
+export interface BackendHistoryItem {
+  id: string;
+  summary: string;
+  action_plan: string[];
+  questions: string[];
+  warnings: string[];
+  confidence_level: string;
+  language: string;
+  mode: string;
+  created_at: string;
+  documents: { id: string; raw_text: string; created_at: string } | null;
+}
+
+export async function fetchRemoteHistory(
+  accessToken: string
+): Promise<BackendHistoryItem[]> {
+  const response = await fetch("/api/history", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch history from server");
+  }
+
+  const json = await response.json();
+  return json.data ?? [];
+}
+
+// ---------------------------------------------------------------------------
+// Local storage history (guest users)
+// ---------------------------------------------------------------------------
+
 const HISTORY_KEY = "carepath_history";
 
 export function saveToHistory(
@@ -56,8 +111,8 @@ export function saveToHistory(
   };
 
   const existing = getHistory();
-  const updated = [historyItem, ...existing].slice(0, 50); // Keep last 50 items
-  
+  const updated = [historyItem, ...existing].slice(0, 50);
+
   if (typeof window !== "undefined") {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   }
@@ -66,15 +121,9 @@ export function saveToHistory(
 }
 
 export function getHistory(): AnalysisHistoryItem[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
+  if (typeof window === "undefined") return [];
   const stored = localStorage.getItem(HISTORY_KEY);
-  if (!stored) {
-    return [];
-  }
-
+  if (!stored) return [];
   try {
     return JSON.parse(stored);
   } catch {
