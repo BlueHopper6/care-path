@@ -148,7 +148,7 @@ export default function HistoryPage() {
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
-                <Link href="/dashboard">
+                <Link href="/analyze">
                   <Button className="gap-2">
                     <FileText className="h-4 w-4" />
                     Start Analysis
