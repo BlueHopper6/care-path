@@ -8,7 +8,8 @@ interface WarningCardProps {
 }
 
 export function WarningCard({ warnings }: WarningCardProps) {
-  if (warnings.length === 0) {
+  const items = warnings ?? [];
+  if (items.length === 0) {
     return null;
   }
 
@@ -22,7 +23,7 @@ export function WarningCard({ warnings }: WarningCardProps) {
       </CardHeader>
       <CardContent>
         <ul className="space-y-2">
-          {warnings.map((warning, index) => (
+          {items.map((warning, index) => (
             <li key={index} className="flex items-start gap-2">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
               <span className="leading-relaxed text-destructive/90">{warning}</span>

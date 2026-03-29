@@ -88,7 +88,7 @@ async function analyzeMedicalText(rawText, options = {}) {
     throw new Error('Gemini API key is not configured. Set GEMINI_API_KEY in your .env file.');
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const prompt = buildPrompt(rawText, options);
 

@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     const normalizedMode = data.mode === "simple" ? "simple" : "default";
 
     // Normalize language: frontend sends ISO codes ("en"), backend needs full name ("English")
-    const normalizedLanguage = LANGUAGE_MAP[data.language] ?? data.language ?? "English";
+    const normalizedLanguage =
+      LANGUAGE_MAP[data.language] ?? data.language ?? "English";
 
     const response = await fetch(`${apiUrl}/api/analyze`, {
       method: "POST",
@@ -40,13 +41,32 @@ export async function POST(request: NextRequest) {
 
     // Backend wraps response in { success: true, data: { ... } }
     const json = await response.json();
+    const inner = json.data ?? json;
 
-    // Return the inner data object directly so it matches AnalyzeResponse shape
-    return NextResponse.json(json.data ?? json);
+    // Normalize shape — guarantee all fields exist so components never crash
+    const normalized = {
+      summary: inner.summary ?? "No summary available.",
+      action_plan: Array.isArray(inner.action_plan) ? inner.action_plan : [],
+      questions_for_doctor: Array.isArray(inner.questions_for_doctor)
+        ? inner.questions_for_doctor
+        : [],
+      warning_signs: Array.isArray(inner.warning_signs)
+        ? inner.warning_signs
+        : [],
+      confidence_level: inner.confidence_level ?? "medium",
+      disclaimer: inner.disclaimer,
+    };
+
+    return NextResponse.json(normalized);
   } catch (err) {
     console.error("[CarePath API route error]", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to analyze medical text" },
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to analyze medical text",
+      },
       { status: 500 }
     );
   }
