@@ -3,7 +3,27 @@
 -- Run this in the Supabase SQL Editor (Dashboard → SQL Editor → New Query)
 -- ============================================================================
 
--- 1. Documents table
+-- 1. Users table (Preferences)
+-- Mirrors auth.users to store application-specific settings
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS public.users (
+  id                UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  auto_save_history BOOLEAN DEFAULT FALSE,
+  created_at        TIMESTAMPTZ DEFAULT now(),
+  updated_at        TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Users can only read and update their own preferences
+CREATE POLICY "Users can view own preferences" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can insert own preferences" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own preferences" ON public.users FOR UPDATE USING (auth.uid() = id);
+
+
+-- 2. Documents table
 -- Stores the raw medical text uploaded by users.
 -- ============================================================================
 

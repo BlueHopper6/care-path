@@ -47,6 +47,8 @@ export async function analyzeText(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
+  // Analyze request now DOES NOT save to database automatically.
+  // It just processes through the model.
   const response = await fetch(`/api/analyze`, {
     method: "POST",
     headers,
@@ -59,6 +61,64 @@ export async function analyzeText(
   }
 
   return response.json();
+}
+
+/**
+ * Save an already processed analysis to the user's history in the DB.
+ */
+export async function saveRemoteAnalysis(
+  request: AnalyzeRequest,
+  analysisResponse: AnalyzeResponse,
+  accessToken: string
+): Promise<void> {
+  const response = await fetch(`/api/analyze/save`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      raw_text: request.raw_text,
+      mode: request.mode,
+      language: request.language,
+      analysis: analysisResponse,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save analysis to history");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Preferences
+// ---------------------------------------------------------------------------
+
+export async function getPreferences(accessToken: string): Promise<{ auto_save_history: boolean }> {
+  const response = await fetch("/api/preferences", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) return { auto_save_history: false };
+  const json = await response.json();
+  return json.data ?? { auto_save_history: false };
+}
+
+export async function updatePreferences(
+  autoSave: boolean,
+  accessToken: string
+): Promise<void> {
+  const response = await fetch("/api/preferences", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ auto_save_history: autoSave }),
+  });
+  
+  if (!response.ok) {
+    throw new Error("Failed to update preferences");
+  }
 }
 
 // ---------------------------------------------------------------------------
