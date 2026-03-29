@@ -12,19 +12,62 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { History, ChevronDown, ChevronUp, Trash2, FileText } from "lucide-react";
-import { getHistory, clearHistory, type AnalysisHistoryItem } from "@/lib/api";
+import { History, ChevronDown, ChevronUp, Trash2, FileText, Loader2 } from "lucide-react";
+import {
+  getHistory,
+  clearHistory,
+  fetchRemoteHistory,
+  type AnalysisHistoryItem,
+  type BackendHistoryItem,
+  type AnalyzeResponse,
+} from "@/lib/api";
+import { useAuth } from "@/context/auth";
 import Link from "next/link";
 
 export default function HistoryPage() {
+  const { session, loading: authLoading } = useAuth();
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
+  // Load history — remote for logged-in users, localStorage for guests
   useEffect(() => {
     setIsClient(true);
-    setHistory(getHistory());
-  }, []);
+    if (authLoading) return;
+
+    if (session?.access_token) {
+      // Fetch persisted analyses from the backend
+      setIsFetching(true);
+      fetchRemoteHistory(session.access_token)
+        .then((remoteItems: BackendHistoryItem[]) => {
+          // Map backend shape to the AnalysisHistoryItem shape the UI expects
+          const mapped: AnalysisHistoryItem[] = remoteItems.map((item) => ({
+            id: item.id,
+            raw_text: item.documents?.raw_text ?? "",
+            mode: (item.mode === "simple" ? "simple" : "detailed") as "simple" | "detailed",
+            language: item.language,
+            result: {
+              summary: item.summary,
+              action_plan: item.action_plan ?? [],
+              questions_for_doctor: item.questions ?? [],
+              warning_signs: item.warnings ?? [],
+              confidence_level: item.confidence_level,
+            } as AnalyzeResponse,
+            created_at: item.created_at,
+          }));
+          setHistory(mapped);
+        })
+        .catch(() => {
+          // Fall back to localStorage on error
+          setHistory(getHistory());
+        })
+        .finally(() => setIsFetching(false));
+    } else {
+      // Guest: use local storage
+      setHistory(getHistory());
+    }
+  }, [session, authLoading]);
 
   const handleClearHistory = () => {
     clearHistory();
@@ -32,31 +75,25 @@ export default function HistoryPage() {
     setExpandedId(null);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
 
-  const truncateText = (text: string, maxLength: number = 100) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
-  };
+  const truncateText = (text: string, maxLength = 100) =>
+    text.length <= maxLength ? text : text.substring(0, maxLength) + "...";
 
-  if (!isClient) {
+  if (!isClient || authLoading || isFetching) {
     return (
       <div className="flex min-h-screen flex-col bg-background">
         <Navbar />
         <main className="flex-1 px-4 py-8">
-          <div className="container mx-auto max-w-3xl">
-            <div className="animate-pulse space-y-4">
-              <div className="h-8 w-48 rounded bg-muted" />
-              <div className="h-4 w-64 rounded bg-muted" />
-            </div>
+          <div className="container mx-auto max-w-3xl flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         </main>
       </div>
@@ -76,11 +113,13 @@ export default function HistoryPage() {
                 Analysis History
               </h1>
               <p className="text-muted-foreground">
-                View and revisit your previous medical document analyses.
+                {session
+                  ? "Your saved analyses from your account."
+                  : "Your recent analyses (stored locally). Sign in to save across devices."}
               </p>
             </div>
 
-            {history.length > 0 && (
+            {history.length > 0 && !session && (
               <Button
                 variant="outline"
                 size="sm"
@@ -98,7 +137,11 @@ export default function HistoryPage() {
             <Empty
               icon={<History className="h-12 w-12" />}
               title="No analysis history"
-              description="Your previous analyses will appear here. Start by analyzing a medical document."
+              description={
+                session
+                  ? "Your analyses will appear here after you analyze a document."
+                  : "Your previous analyses will appear here. Start by analyzing a medical document."
+              }
             >
               <Link href="/dashboard">
                 <Button className="gap-2">
@@ -132,7 +175,7 @@ export default function HistoryPage() {
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {truncateText(item.raw_text)}
+                              {truncateText(item.raw_text || item.result.summary)}
                             </p>
                           </div>
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">

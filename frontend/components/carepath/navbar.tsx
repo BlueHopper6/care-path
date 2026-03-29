@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Heart, LayoutDashboard, History } from "lucide-react";
@@ -8,11 +7,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "./auth-modal";
 import { UserDropdown } from "./user-dropdown";
-
-interface User {
-  email: string;
-  name?: string;
-}
+import { useAuth } from "@/context/auth";
+import { useState } from "react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -21,7 +17,7 @@ const NAV_ITEMS = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, signIn, signUp, signOut } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signin");
 
@@ -35,36 +31,19 @@ export function Navbar() {
     setAuthModalOpen(true);
   };
 
-  // Placeholder auth functions - ready for backend integration
+  // Adapt AuthModal's expected signature to useAuth's API
   const handleSignIn = async (email: string, password: string) => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Mock validation - replace with real auth later
-    if (password.length < 6) {
-      throw new Error("Invalid credentials");
-    }
-    
-    // Simulate successful login
-    setUser({ email, name: email.split("@")[0] });
+    await signIn(email, password); // throws on error, caught by AuthModal
   };
 
   const handleSignUp = async (email: string, password: string) => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Mock validation - replace with real auth later
-    if (password.length < 6) {
-      throw new Error("Password must be at least 6 characters");
-    }
-    
-    // Simulate successful signup
-    setUser({ email, name: email.split("@")[0] });
+    await signUp(email, password);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-  };
+  // Map Supabase User to the shape UserDropdown expects
+  const userForDropdown = user
+    ? { email: user.email ?? "", name: user.email?.split("@")[0] }
+    : null;
 
   return (
     <>
@@ -123,8 +102,8 @@ export function Navbar() {
               })}
             </nav>
 
-            {user ? (
-              <UserDropdown user={user} onLogout={handleLogout} />
+            {userForDropdown ? (
+              <UserDropdown user={userForDropdown} onLogout={signOut} />
             ) : (
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={openSignIn}>
