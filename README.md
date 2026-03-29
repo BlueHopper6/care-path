@@ -37,26 +37,30 @@ The system is designed to help users better understand their care while keeping 
 ---
 
 ## Key Features
-- **Medical Text Simplification**  
-  Converts complex clinical language into clear, patient-friendly explanations
+- **Medical Text & Document Simplification**  
+  Upload PDFs, TXTs, or paste complex clinical language to instantly convert it into clear, patient-friendly explanations.
 
-- **Actionable Care Plans**  
-  Extracts concrete next steps, including medications, follow-ups, and lifestyle guidance
+- **Actionable Care Plans & Smart Reminders**  
+  Extracts concrete next steps, including medications, follow-ups, and lifestyle guidance. 
+  - *Google Calendar Integration:* Instantly sync automatically-generated repeating schedules (e.g., medication taking) to your personal calendar.
 
 - **Doctor Question Generator**  
-  Helps patients prepare for more effective medical conversations
+  Helps patients prepare for more effective medical conversations.
 
 - **Safety Awareness**  
-  Highlights warning signs and encourages seeking professional care when needed
+  Highlights warning signs and encourages seeking professional care when needed.
 
 - **“Explain Like I’m 12” Mode**  
-  Further simplifies content for maximum accessibility
+  Further simplifies content for maximum accessibility.
 
 - **Multilingual Support**  
-  Outputs information in different languages for broader accessibility
+  Outputs information in different languages for broader accessibility.
 
-- **History Tracking**  
-  Stores past analyses for easy reference
+- **Privacy-First History Tracking**  
+  Explicit consent flow allows users to safely persist past analyses indefinitely or keep them local.
+
+- **Printable Export**  
+  Download or print your structured analysis offline for caregivers and clinical visits.
 
 ---
 
