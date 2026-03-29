@@ -30,49 +30,6 @@ async function analyzeText(req, res) {
       analysis.warning_signs = [...req.emergencyWarnings, ...analysis.warning_signs];
     }
 
-    // If user is authenticated, persist to Supabase
-    if (req.user && req.accessToken) {
-      try {
-        const supabase = createUserClient(req.accessToken);
-
-        // Store the document
-        const { data: doc, error: docError } = await supabase
-          .from('documents')
-          .insert({
-            user_id: req.user.id,
-            raw_text: raw_text.substring(0, 100000), // safety cap
-          })
-          .select('id')
-          .single();
-
-        if (docError) {
-          console.error('Error storing document:', docError);
-        }
-
-        // Store the analysis
-        if (doc) {
-          const { error: analysisError } = await supabase.from('analyses').insert({
-            user_id: req.user.id,
-            document_id: doc.id,
-            summary: analysis.summary,
-            action_plan: analysis.action_plan,
-            questions: analysis.questions_for_doctor,
-            warnings: analysis.warning_signs,
-            confidence_level: analysis.confidence_level,
-            language: language || 'English',
-            mode: mode,
-          });
-
-          if (analysisError) {
-            console.error('Error storing analysis:', analysisError);
-          }
-        }
-      } catch (dbErr) {
-        // Don't fail the request if DB storage fails
-        console.error('Database storage error (non-fatal):', dbErr.message);
-      }
-    }
-
     return res.json({
       success: true,
       data: analysis,
@@ -87,4 +44,64 @@ async function analyzeText(req, res) {
   }
 }
 
-module.exports = { analyzeText };
+/**
+ * POST /api/analyze/save
+ * Explicitly saves a pre-analyzed result to the database for logged in users.
+ */
+async function saveAnalyzedText(req, res) {
+  try {
+    const { raw_text, analysis, mode, language } = req.body;
+
+    if (!raw_text || !analysis) {
+      return res.status(400).json({ error: 'raw_text and analysis are required.' });
+    }
+
+    if (req.user && req.accessToken) {
+      const supabase = createUserClient(req.accessToken);
+
+      // Store the document
+      const { data: doc, error: docError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: req.user.id,
+          raw_text: raw_text.substring(0, 100000), // safety cap
+        })
+        .select('id')
+        .single();
+
+      if (docError) {
+        console.error('Error storing document:', docError);
+        return res.status(500).json({ error: 'Failed to store document.' });
+      }
+
+      // Store the analysis
+      if (doc) {
+        const { error: analysisError } = await supabase.from('analyses').insert({
+          user_id: req.user.id,
+          document_id: doc.id,
+          summary: analysis.summary,
+          action_plan: analysis.action_plan,
+          questions: analysis.questions_for_doctor,
+          warnings: analysis.warning_signs,
+          confidence_level: analysis.confidence_level,
+          language: language || 'English',
+          mode: mode || 'default',
+        });
+
+        if (analysisError) {
+          console.error('Error storing analysis:', analysisError);
+          return res.status(500).json({ error: 'Failed to store analysis.' });
+        }
+      }
+
+      return res.json({ success: true, message: 'Analysis saved successfully' });
+    }
+
+    return res.status(401).json({ error: 'Unauthorized' });
+  } catch (err) {
+    console.error('Save error:', err);
+    return res.status(500).json({ error: 'Failed to save analysis.' });
+  }
+}
+
+module.exports = { analyzeText, saveAnalyzedText };
