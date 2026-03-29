@@ -11,7 +11,7 @@ import { useAuth } from "@/context/auth";
 import { useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/analyze", label: "Analyze", icon: LayoutDashboard },
   { href: "/history", label: "History", icon: History },
 ];
 

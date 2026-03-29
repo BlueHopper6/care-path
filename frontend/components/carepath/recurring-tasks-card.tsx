@@ -21,7 +21,7 @@ export function RecurringTasksCard({ tasks }: RecurringTasksCardProps) {
     const text = encodeURIComponent(task.title);
     const details = encodeURIComponent(task.description + `\n\nFrequency: ${task.frequency}`);
     let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&details=${details}`;
-    
+
     if (task.rrule) {
       // Ensure it starts with RRULE: for the Google Calendar API
       let rruleStr = task.rrule;

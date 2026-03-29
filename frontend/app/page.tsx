@@ -27,7 +27,7 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-col items-center gap-4 pt-4 sm:flex-row sm:justify-center">
-              <Link href="/dashboard">
+              <Link href="/analyze">
                 <Button size="lg" className="gap-2">
                   Start Analysis
                   <ArrowRight className="h-4 w-4" />
