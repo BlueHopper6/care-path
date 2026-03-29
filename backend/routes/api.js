@@ -6,22 +6,25 @@ const optionalAuth = require('../middleware/optionalAuth');
 const { safetyMiddleware } = require('../middleware/safety');
 const { analyzeText } = require('../controllers/analyze');
 const { uploadDocument, getHistory } = require('../controllers/documents');
+const { upload, parseFile } = require('../controllers/fileParser');
 
 // ---------------------------------------------------------------------------
-// Public analyze route — optionalAuth identifies logged-in users so their
-// analyses get saved to the DB. Guests still get full analysis, just no persistence.
+// File parsing — public, no auth needed
+// ---------------------------------------------------------------------------
+
+router.post('/parse-file', upload.single('file'), parseFile);
+
+// ---------------------------------------------------------------------------
+// Analyze — optionalAuth identifies logged-in users for DB persistence
 // ---------------------------------------------------------------------------
 
 router.post('/analyze', optionalAuth, safetyMiddleware, analyzeText);
 
 // ---------------------------------------------------------------------------
-// Protected routes (require Supabase auth)
+// Protected routes
 // ---------------------------------------------------------------------------
 
-// Upload raw medical text document
 router.post('/upload', authMiddleware, uploadDocument);
-
-// Retrieve past analyses
 router.get('/history', authMiddleware, getHistory);
 
 module.exports = router;
