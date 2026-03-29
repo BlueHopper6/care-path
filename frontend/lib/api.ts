@@ -23,7 +23,9 @@ export interface AnalysisHistoryItem {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export async function analyzeText(data: AnalyzeRequest): Promise<AnalyzeResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+  // Always call the Next.js API route (relative URL) which proxies to the
+  // Express backend and normalizes the response shape.
+  const response = await fetch(`/api/analyze`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -32,7 +34,8 @@ export async function analyzeText(data: AnalyzeRequest): Promise<AnalyzeResponse
   });
 
   if (!response.ok) {
-    throw new Error(`Analysis failed: ${response.statusText}`);
+    const errBody = await response.json().catch(() => ({}));
+    throw new Error(errBody.error || `Analysis failed: ${response.statusText}`);
   }
 
   return response.json();

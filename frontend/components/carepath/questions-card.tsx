@@ -8,6 +8,7 @@ interface QuestionsCardProps {
 }
 
 export function QuestionsCard({ questions }: QuestionsCardProps) {
+  const items = questions ?? [];
   return (
     <Card className="border-primary/20">
       <CardHeader className="flex flex-row items-center gap-3 pb-3">
@@ -18,7 +19,7 @@ export function QuestionsCard({ questions }: QuestionsCardProps) {
       </CardHeader>
       <CardContent>
         <ul className="space-y-2">
-          {questions.map((question, index) => (
+          {items.map((question, index) => (
             <li key={index} className="flex items-start gap-2">
               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
               <span className="leading-relaxed text-muted-foreground">{question}</span>

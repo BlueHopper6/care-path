@@ -8,6 +8,7 @@ interface ActionPlanCardProps {
 }
 
 export function ActionPlanCard({ actionPlan }: ActionPlanCardProps) {
+  const steps = actionPlan ?? [];
   return (
     <Card className="border-primary/20">
       <CardHeader className="flex flex-row items-center gap-3 pb-3">
@@ -18,7 +19,7 @@ export function ActionPlanCard({ actionPlan }: ActionPlanCardProps) {
       </CardHeader>
       <CardContent>
         <ol className="space-y-3">
-          {actionPlan.map((step, index) => (
+          {steps.map((step, index) => (
             <li key={index} className="flex gap-3">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                 {index + 1}
