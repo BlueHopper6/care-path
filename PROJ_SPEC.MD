@@ -41,10 +41,11 @@ It acts as a **translator and guide**, not a decision-maker.
 
 ## Core Features
 
-### 1. Text Analysis
-Users input medical text and receive:
+### 1. Text & File Analysis
+Users input medical text or upload documents (PDF/TXT) and receive:
 - Summary
 - Action plan
+- Recurring Tasks & Reminders (with specific frequencies and calendar RRULEs)
 - Questions
 - Warning signs
 
@@ -54,10 +55,16 @@ Users input medical text and receive:
 ### 3. Multilingual Support
 - Translate outputs into different languages
 
-### 4. History Tracking
-- Store and retrieve past analyses
+### 4. History Tracking with Privacy Consent
+- Safely store and retrieve past analyses.
+- Explicit "Save to History" consent flow ensures users control their medical data.
+- User preferences dashboard to toggle automatic saving.
 
-### 5. Safety System
+### 5. Actionable Outputs
+- **Google Calendar Integration:** Automatically generate exact calendar events for repeating medical obligations.
+- **Printable Export:** Generate dependency-free, clean PDF views of your analysis for doctors or caregivers.
+
+### 6. Safety System
 - Detect emergency symptoms
 - Prompt immediate medical attention
 
@@ -102,9 +109,13 @@ Input:
 Output:
 - summary
 - action_plan
+- recurring_tasks (with optional rrule schedule representations)
 - questions_for_doctor
 - warning_signs
 - confidence_level
+
+### POST /api/analyze/save
+Protected endpoint that safely commits completed AI analyses to the database under user consent schemas.
 
 ---
 
@@ -141,7 +152,7 @@ Unlike typical AI health apps, CarePath:
 ## MVP Scope
 - Text input only (file upload optional)
 - Basic AI processing
-- Simple UI dashboard
+- Simple "Analyze" interface
 - Core API endpoints
 - Safety detection
 
