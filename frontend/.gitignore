@@ -14,7 +14,3 @@ next.user-config.*
 node_modules
 .next/
 .DS_Store
-
-# Backend
-backend/node_modules/
-backend/.env
