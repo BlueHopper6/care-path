@@ -17,14 +17,19 @@ async function optionalAuth(req, _res, next) {
     const token = authHeader.split(' ')[1];
     if (!token) return next();
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_ANON_KEY || '',
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-        auth: { persistSession: false },
-      }
-    );
+    // Basic JWT structure check — must have 3 dot-separated parts
+    if (token.split('.').length !== 3) return next();
+
+    const supabaseUrl = process.env.SUPABASE_URL || '';
+    const supabaseAnonKey =
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_SERVICE_KEY ||
+      '';
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false },
+    });
 
     const { data: { user }, error } = await supabase.auth.getUser();
 

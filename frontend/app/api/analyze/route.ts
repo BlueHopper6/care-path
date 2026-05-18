@@ -71,13 +71,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(normalized);
   } catch (err) {
     console.error("[CarePath API route error]", err);
+
+    // Never forward raw backend error messages — they may leak internal details
+    const safeMessage =
+      err instanceof Error && !err.message.includes("Backend error")
+        ? err.message
+        : "Failed to analyze medical text. Please try again.";
+
     return NextResponse.json(
-      {
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to analyze medical text",
-      },
+      { error: safeMessage },
       { status: 500 }
     );
   }

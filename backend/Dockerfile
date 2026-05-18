@@ -9,7 +9,7 @@ RUN npm ci --only=production
 COPY . .
 
 # Expose backend port
-EXPOSE 3001
+EXPOSE 3000
 
 # Start the application
 CMD ["npm", "start"]

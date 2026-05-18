@@ -33,10 +33,10 @@ RUN npm ci --only=production
 # Copy built assets from builder
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/next.config.mjs ./
 
 # Expose frontend port
-EXPOSE 3000
+EXPOSE 5173
 
 # Start Next.js production server
 CMD ["npm", "start"]

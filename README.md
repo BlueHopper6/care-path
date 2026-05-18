@@ -1,137 +1,208 @@
-# CarePath - AI-Powered Healthcare Navigation
+# CarePath
 
-## Overview
-CarePath is an AI-powered healthcare navigation tool designed to help patients understand complex medical documents. It transforms discharge summaries, lab reports, and treatment instructions into clear, structured, and actionable information without replacing professional medical advice.
+**AI-Powered Healthcare Navigation Platform**
 
-Built for a social impact hackathon, CarePath addresses a critical gap in healthcare: patients often leave medical appointments confused, overwhelmed, and unsure of what to do next. This project focuses on empowering individuals with clarity, not making decisions for them.
-
----
-
-## Problem
-Healthcare information is often:
-- Filled with technical jargon
-- Poorly explained in time-constrained clinical settings
-- Difficult for patients with low health literacy or language barriers
-
-As a result, patients may:
-- Misunderstand treatment instructions
-- Miss medications or follow-ups
-- Fail to recognize warning signs
-
-CarePath aims to reduce this confusion by making medical information accessible and actionable.
+CarePath transforms complex medical documents — discharge summaries, lab reports, and treatment instructions — into clear, structured, and actionable information. It empowers patients to understand their care without replacing professional medical advice.
 
 ---
 
-## Solution
-CarePath acts as a **translator and guide**, not a decision-maker.
+## Architecture
 
-Users can input medical text (ex: discharge notes, lab results), and CarePath generates:
+CarePath uses a decoupled client-server architecture with a secure data layer:
 
-- **Plain-language summaries** of what the document says  
-- **Step-by-step action plans** for what to do next  
-- **Suggested questions** to ask a healthcare provider  
-- **Warning signs** that may require attention  
+```
+┌─────────────────────────┐     HTTPS      ┌────────────────────────┐
+│   Next.js Frontend      │ ◄────────────► │   Express.js Backend   │
+│   (App Router, Tailwind,│   API Proxy    │   (Validation, Safety, │
+│    Radix UI, TypeScript)│                │    Rate Limiting)      │
+└────────────┬────────────┘                └──────┬────────┬────────┘
+             │                                    │        │
+             │ Auth (JWT)                   AI    │        │ RLS
+             ▼                                    ▼        ▼
+     ┌───────────────┐                   ┌──────────┐ ┌──────────┐
+     │   Supabase    │                   │  Gemini  │ │ Supabase │
+     │   Auth        │                   │  2.5     │ │ Postgres │
+     └───────────────┘                   │  Flash   │ │ (RLS)    │
+                                         └──────────┘ └──────────┘
+```
 
-The system is designed to help users better understand their care while keeping healthcare professionals at the center of decision-making.
-
----
-
-## Key Features
-- **Medical Text & Document Simplification**  
-  Upload PDFs, TXTs, or paste complex clinical language to instantly convert it into clear, patient-friendly explanations.
-
-- **Actionable Care Plans & Smart Reminders**  
-  Extracts concrete next steps, including medications, follow-ups, and lifestyle guidance. 
-  - *Google Calendar Integration:* Instantly sync automatically-generated repeating schedules (e.g., medication taking) to your personal calendar.
-
-- **Doctor Question Generator**  
-  Helps patients prepare for more effective medical conversations.
-
-- **Safety Awareness**  
-  Highlights warning signs and encourages seeking professional care when needed.
-
-- **“Explain Like I’m 12” Mode**  
-  Further simplifies content for maximum accessibility.
-
-- **Multilingual Support**  
-  Outputs information in different languages for broader accessibility.
-
-- **Privacy-First History Tracking**  
-  Explicit consent flow allows users to safely persist past analyses indefinitely or keep them local.
-
-- **Printable Export**  
-  Download or print your structured analysis offline for caregivers and clinical visits.
+| Layer | Stack |
+|-------|-------|
+| **Frontend** | Next.js 16 (App Router), Tailwind CSS 4, TypeScript, Radix UI, shadcn/ui, React Hook Form, Zod |
+| **Backend** | Node.js 20, Express.js, Zod validation, Helmet, express-rate-limit |
+| **Database & Auth** | Supabase (PostgreSQL with Row Level Security, JWT Auth) |
+| **AI** | Google Gemini API (gemini-2.5-flash) |
+| **Infrastructure** | Docker Compose, Cloudflare Tunnels |
 
 ---
 
-## Tech Stack
+## Core Features
 
-### Frontend
-- Next.js
-- Tailwind CSS
-- shadcn/ui
-
-### Backend
-- Node.js
-- Express.js
-
-### AI
-- Google Gemini API (free-tier compatible)
-
-### Database & Auth
-- Supabase (PostgreSQL + Authentication)
+- **Medical Document Simplification** — Upload PDFs, TXT files, or paste clinical text. CarePath converts it into plain-language summaries, action plans, and warning signs.
+- **"Explain Like I'm 12" Mode** — Further simplifies output to a 6th-grade reading level for maximum accessibility.
+- **Multilingual Output** — Supports English, Spanish, French, German, Chinese, Arabic, Hindi, and Portuguese.
+- **Recurring Task Extraction** — Automatically identifies repeating medical obligations (medications, follow-ups) and generates Google Calendar events with RRULE scheduling.
+- **Privacy-First History** — Explicit consent flow for data persistence. Guests get 24-hour auto-expiring local storage. Authenticated users get encrypted server-side storage with full RLS protection.
+- **Printable Export** — Generate clean, dependency-free PDF reports for caregivers and clinical visits.
+- **Emergency Detection** — Rule-based safety middleware detects emergency symptoms (chest pain, breathing difficulty, stroke, overdose) and injects urgent warnings into results.
 
 ---
 
-## How It Works
-1. User pastes or uploads a medical document
-2. The backend processes the text using an AI model
-3. The system extracts and restructures key information
-4. The frontend displays results in a clear, structured format
+## Security & Compliance
+
+CarePath implements defense-in-depth security appropriate for healthcare data:
+
+### Input Validation
+- **Zod schemas** enforce strict payload validation on all POST/PUT routes.
+- HTML tags are stripped from text inputs to prevent stored XSS.
+- Request body sizes are bounded (1 MB JSON, 5 MB file uploads).
+
+### File Upload Security
+- Multer rejects non-PDF/TXT MIME types.
+- **Magic byte validation** verifies actual file content (PDF must start with `%PDF`, TXT must not contain null bytes) — client-reported MIME types are never trusted alone.
+- PDF parsing has a 30-second timeout to prevent CPU exhaustion.
+
+### Authentication & Authorization
+- Supabase JWT-based auth with Bearer token verification.
+- **Row Level Security (RLS)** on all database tables — users can only access their own data.
+- All database queries use user-scoped clients (`createUserClient`) that respect RLS.
+- JWT format pre-validation before hitting Supabase API.
+
+### Rate Limiting
+- **General**: 200 requests / 15 minutes (metadata, preferences, history).
+- **Compute**: 15 requests / 15 minutes (AI analysis, file parsing).
+- `trust proxy` configured for accurate IP detection behind Cloudflare/nginx.
+
+### Security Headers
+- Helmet with explicit CSP (`default-src 'self'`, `frame-ancestors 'none'`).
+- `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`.
+- `Permissions-Policy` disabling camera, microphone, and geolocation.
+- CORS strictly locked to `FRONTEND_URL` — no wildcard origins.
+
+### PHI Protection
+- Error handlers never log raw medical text or user data.
+- Client error responses contain generic messages only — no stack traces or internal details.
+- Guest localStorage history auto-expires after 24 hours.
+
+### Ethical AI Framework
+- The AI prompt enforces a strict **No-Diagnosis Policy**: CarePath never diagnoses conditions, recommends medication changes, or suggests treatments.
+- All outputs are framed as "what the document says" — not medical opinions.
+- Every response includes a medical disclaimer.
+- Emergency detection middleware runs **before** AI analysis and injects safety warnings for critical symptoms.
 
 ---
 
-## Ethical Design
+## Setup & Deployment
 
-CarePath is built with strong ethical constraints:
+### Prerequisites
 
-- Does NOT diagnose conditions  
-- Does NOT recommend treatments or medication changes  
-- Encourages consultation with healthcare professionals  
-- Clearly communicates limitations  
-- Minimizes sensitive data storage  
+- Node.js 20+
+- npm
+- [Supabase](https://supabase.com) project (free tier)
+- [Google Gemini API key](https://aistudio.google.com/apikey) (free tier)
 
-The goal is to **support patient understanding**, not replace medical expertise.
+### Local Development
+
+```bash
+# 1. Clone and configure
+git clone <repo-url>
+cd care-path
+cp .env.example .env
+# Edit .env with your actual keys
+
+# 2. Set up the database
+# Go to Supabase Dashboard → SQL Editor
+# Paste contents of backend/database/migration.sql → Run
+
+# 3. Start backend
+cd backend
+cp .env.example .env
+# Edit .env with your actual keys
+npm install
+npm run dev
+
+# 4. Start frontend (new terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+### Environment Variables
+
+#### Root `.env` (Docker Compose)
+
+| Variable | Description | Used By |
+|----------|-------------|---------|
+| `FRONTEND_URL` | Frontend domain for CORS | Backend |
+| `NEXT_PUBLIC_API_URL` | Backend API URL | Frontend |
+| `SUPABASE_URL` | Supabase project URL | Backend |
+| `SUPABASE_ANON_KEY` | Supabase anon/public key | Backend |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Backend |
+| `GEMINI_API_KEY` | Google Gemini API key | Backend |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL (client) | Frontend |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (client) | Frontend |
+
+### Docker Compose Deployment
+
+```bash
+# Build and start all services
+docker compose up --build -d
+
+# Services:
+# - Backend:  http://localhost:3000
+# - Frontend: http://localhost:5173
+```
 
 ---
 
-## Hackathon Context
+## API Reference
 
-This project was developed as part of a hackathon focused on **Social Impact**, specifically within the **Biology & Physical Health** track.
+### Public Endpoints
 
-The challenge emphasized:
-- Solving real problems for specific users  
-- Using AI to empower (not replace) people  
-- Addressing ethical risks and safeguards  
-- Building working prototypes with meaningful impact  
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/health` | Health check |
+| `POST` | `/api/analyze` | Analyze medical text (optional auth for history) |
+| `POST` | `/api/parse-file` | Extract text from PDF/TXT uploads |
 
-CarePath aligns with these goals by tackling a real-world healthcare communication gap and prioritizing patient empowerment.
+### Authenticated Endpoints
+
+All require `Authorization: Bearer <supabase-access-token>` header.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/analyze/save` | Save analysis to user history |
+| `POST` | `/api/upload` | Store raw document text |
+| `GET` | `/api/history` | Retrieve past analyses (paginated) |
+| `GET` | `/api/preferences` | Get user preferences |
+| `PUT` | `/api/preferences` | Update user preferences |
+
+### Example
+
+```bash
+curl -X POST http://localhost:3000/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "raw_text": "Patient discharged after appendectomy. Take ibuprofen 400mg every 6 hours for pain. Follow up with surgeon in 2 weeks.",
+    "mode": "simple",
+    "language": "English"
+  }'
+```
 
 ---
 
-## Future Improvements
-- OCR for scanned medical documents (PDF/image support)
-- Voice input for accessibility
-- Integration with healthcare systems (EHRs)
-- Personalized health tracking
-- Expanded multilingual and cultural support
+## Contributing
 
----
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development standards, security requirements, and PR checklist.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for the security architecture, vulnerability reporting process, and HIPAA-aligned development guidelines.
 
 ## Disclaimer
-CarePath does not provide medical advice. Always consult a qualified healthcare professional for any medical decisions.
 
----
+CarePath does not provide medical advice, diagnosis, or treatment recommendations. Always consult a qualified healthcare professional for medical decisions.
 
 ## License
-This project is for educational and hackathon purposes. Further development should include compliance with healthcare data regulations.
+
+MIT
