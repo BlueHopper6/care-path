@@ -3,12 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 // Map ISO 639-1 language codes to full language names for the AI prompt
 const LANGUAGE_MAP: Record<string, string> = {
   en: "English",
+  te: "Telugu",
+  hi: "Hindi",
   es: "Spanish",
   fr: "French",
   de: "German",
   zh: "Chinese",
   ar: "Arabic",
-  hi: "Hindi",
   pt: "Portuguese",
 };
 
