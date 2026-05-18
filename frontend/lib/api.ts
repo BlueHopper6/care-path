@@ -157,9 +157,24 @@ export async function fetchRemoteHistory(
 
 // ---------------------------------------------------------------------------
 // Local storage history (guest users)
+//
+// ⚠️  SECURITY NOTE: localStorage is unencrypted and accessible to any script
+// running on this origin. Guest analysis history stored here is convenience-only
+// and automatically expires after 24 hours. For persistent, secure storage,
+// users must sign in (data is stored server-side with RLS protection).
+// Never store raw JWTs or full medical documents in localStorage long-term.
 // ---------------------------------------------------------------------------
 
 const HISTORY_KEY = "carepath_history";
+const HISTORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Filter out expired history items based on the 24-hour TTL.
+ */
+function filterExpiredItems(items: AnalysisHistoryItem[]): AnalysisHistoryItem[] {
+  const cutoff = Date.now() - HISTORY_TTL_MS;
+  return items.filter((item) => new Date(item.created_at).getTime() > cutoff);
+}
 
 export function saveToHistory(
   request: AnalyzeRequest,
@@ -172,7 +187,7 @@ export function saveToHistory(
     created_at: new Date().toISOString(),
   };
 
-  const existing = getHistory();
+  const existing = filterExpiredItems(getHistory());
   const updated = [historyItem, ...existing].slice(0, 50);
 
   if (typeof window !== "undefined") {
@@ -187,7 +202,8 @@ export function getHistory(): AnalysisHistoryItem[] {
   const stored = localStorage.getItem(HISTORY_KEY);
   if (!stored) return [];
   try {
-    return JSON.parse(stored);
+    const items: AnalysisHistoryItem[] = JSON.parse(stored);
+    return filterExpiredItems(items);
   } catch {
     return [];
   }
@@ -202,3 +218,4 @@ export function clearHistory(): void {
     localStorage.removeItem(HISTORY_KEY);
   }
 }
+

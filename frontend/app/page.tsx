@@ -12,10 +12,10 @@ export default function LandingPage() {
       <main className="flex flex-1 flex-col">
         <section className="flex flex-1 flex-col items-center justify-center px-4 py-16 text-center md:py-24">
           <div className="mx-auto max-w-3xl space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-secondary px-4 py-1.5 text-sm text-secondary-foreground">
+            {/* <div className="inline-flex items-center gap-2 rounded-full border bg-secondary px-4 py-1.5 text-sm text-secondary-foreground">
               <Shield className="h-4 w-4" />
               Trusted by thousands of patients
-            </div>
+            </div> */}
 
             <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl md:text-6xl">
               Understand Your Medical Instructions Clearly
@@ -84,10 +84,14 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="border-t py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground flex flex-col gap-2">
           <p>This tool does not provide medical advice. Always consult a healthcare professional.</p>
+          <p>
+            <Link href="/terms" className="underline hover:text-foreground transition-colors">
+              Read our full Terms of Service & Legal Disclaimer
+            </Link>
+          </p>
         </div>
       </footer>
     </div>

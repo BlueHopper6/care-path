@@ -77,6 +77,22 @@ Respond with ONLY the JSON object. No markdown, no code fences, no explanation.`
 }
 
 // ---------------------------------------------------------------------------
+// Timeout wrapper
+// ---------------------------------------------------------------------------
+
+/**
+ * Wraps a promise with a timeout to prevent indefinite hangs from the AI API.
+ */
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('AI request timed out after 60 seconds.')), ms)
+    ),
+  ]);
+}
+
+// ---------------------------------------------------------------------------
 // Analyse medical text
 // ---------------------------------------------------------------------------
 
@@ -98,14 +114,9 @@ async function analyzeMedicalText(rawText, options = {}) {
   }
 
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-  // do not work
-  // const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
-  // const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
-
   const prompt = buildPrompt(rawText, options);
 
-  const result = await model.generateContent(prompt);
+  const result = await withTimeout(model.generateContent(prompt), 60000);
   const response = result.response;
   const text = response.text();
 
@@ -119,7 +130,8 @@ async function analyzeMedicalText(rawText, options = {}) {
   try {
     parsed = JSON.parse(cleaned);
   } catch {
-    console.error('Failed to parse Gemini response:', cleaned);
+    // Truncate logged response to prevent massive log entries
+    console.error('Failed to parse Gemini response:', cleaned.substring(0, 200));
     throw new Error('AI returned an invalid response. Please try again.');
   }
 

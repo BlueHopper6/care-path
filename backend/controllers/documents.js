@@ -4,18 +4,11 @@ const { createUserClient } = require('../utils/supabase');
  * POST /api/upload
  *
  * Store raw medical text in the documents table.
+ * Input validation is handled by the validation middleware.
  */
 async function uploadDocument(req, res) {
   try {
     const { raw_text } = req.body;
-
-    if (!raw_text || typeof raw_text !== 'string' || raw_text.trim().length === 0) {
-      return res.status(400).json({ error: 'raw_text is required and must be a non-empty string.' });
-    }
-
-    if (raw_text.length > 100000) {
-      return res.status(400).json({ error: 'raw_text exceeds the 100,000 character limit.' });
-    }
 
     const supabase = createUserClient(req.accessToken);
 
@@ -29,7 +22,7 @@ async function uploadDocument(req, res) {
       .single();
 
     if (error) {
-      console.error('Upload error:', error);
+      console.error('Upload error:', { code: error.code, hint: error.hint });
       return res.status(500).json({ error: 'Failed to store document.' });
     }
 
@@ -41,7 +34,7 @@ async function uploadDocument(req, res) {
       },
     });
   } catch (err) {
-    console.error('Upload error:', err);
+    console.error('Upload error:', { name: err.name, message: err.message });
     return res.status(500).json({ error: 'Failed to upload document.' });
   }
 }
@@ -56,8 +49,8 @@ async function getHistory(req, res) {
   try {
     const supabase = createUserClient(req.accessToken);
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 20), 50);
     const offset = (page - 1) * limit;
 
     const { data, error, count } = await supabase
@@ -82,7 +75,7 @@ async function getHistory(req, res) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('History fetch error:', error);
+      console.error('History fetch error:', { code: error.code, hint: error.hint });
       return res.status(500).json({ error: 'Failed to fetch history.' });
     }
 
@@ -97,7 +90,7 @@ async function getHistory(req, res) {
       },
     });
   } catch (err) {
-    console.error('History error:', err);
+    console.error('History error:', { name: err.name, message: err.message });
     return res.status(500).json({ error: 'Failed to fetch history.' });
   }
 }

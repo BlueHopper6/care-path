@@ -7,12 +7,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "4003:3001"
+      - "3000:3000"
     environment:
-      # Use provided Cloudflare tunnel domain for CORS whitelist
-      - FRONTEND_URL=${FRONTEND_URL:-https://care-path.vilohit.dev}
+      - NODE_ENV=production
+      # All values must be set in .env — no fallbacks to prevent accidental exposure
+      - FRONTEND_URL=${FRONTEND_URL}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     restart: unless-stopped
     networks:
@@ -24,15 +26,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Pass NEXT_PUBLIC vars so Next.js can embed them at build time
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://care-path-api.vilohit.dev}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     ports:
-      - "5176:3000"
+      - "5173:5173"
     environment:
-      # Fallback runtime variable for Next.js server-side proxy routes
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://care-path-api.vilohit.dev}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     restart: unless-stopped
     networks:
       - carepath-network

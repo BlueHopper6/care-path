@@ -15,7 +15,7 @@ async function getPreferences(req, res) {
       .maybeSingle();
 
     if (error) {
-      console.error('Error fetching preferences:', error);
+      console.error('Error fetching preferences:', { code: error.code });
       return res.status(500).json({ error: 'Failed to fetch preferences.' });
     }
 
@@ -27,8 +27,8 @@ async function getPreferences(req, res) {
       },
     });
   } catch (err) {
-    console.error('Preferences error:', err);
-    return res.status(500).json({ error: 'Internal server error fetching preferences.' });
+    console.error('Preferences error:', { name: err.name, message: err.message });
+    return res.status(500).json({ error: 'Failed to fetch preferences.' });
   }
 }
 
@@ -36,13 +36,11 @@ async function getPreferences(req, res) {
  * PUT /api/preferences
  * Update the user's preferences in the public.users table.
  * Uses upsert since the row might not exist yet for new signups.
+ *
+ * Input validation is handled by the validation middleware.
  */
 async function updatePreferences(req, res) {
   try {
-    if (typeof req.body.auto_save_history !== 'boolean') {
-      return res.status(400).json({ error: 'auto_save_history must be a boolean.' });
-    }
-
     const supabase = createUserClient(req.accessToken);
 
     const { error } = await supabase
@@ -54,7 +52,7 @@ async function updatePreferences(req, res) {
       }, { onConflict: 'id' });
 
     if (error) {
-      console.error('Error updating preferences:', error);
+      console.error('Error updating preferences:', { code: error.code });
       return res.status(500).json({ error: 'Failed to update preferences.' });
     }
 
@@ -63,8 +61,8 @@ async function updatePreferences(req, res) {
       data: { auto_save_history: req.body.auto_save_history },
     });
   } catch (err) {
-    console.error('Preferences update error:', err);
-    return res.status(500).json({ error: 'Internal server error updating preferences.' });
+    console.error('Preferences update error:', { name: err.name, message: err.message });
+    return res.status(500).json({ error: 'Failed to update preferences.' });
   }
 }
 

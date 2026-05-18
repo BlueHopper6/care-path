@@ -1,3 +1,10 @@
+# Environment variables (NEVER commit secrets)
+.env
+.env*.local
+.env.local
+.env.example
+*.env.example
+
 # v0 sandbox internal files
 __v0_runtime_loader.js
 __v0_devtools.tsx
@@ -7,12 +14,8 @@ __v0_jsx-dev-runtime.ts
 .vercel/
 next.user-config.*
 
-# Environment variables
-.env*.local
-.env
-
 # Common ignores
-node_modules
+node_modules/
 .next/
 .DS_Store
 
@@ -20,5 +23,9 @@ node_modules
 backend/node_modules/
 backend/.env
 
-# test data
+# Frontend — prevent accidental lockfile conflicts
+frontend/.env
+pnpm-lock.yaml
+
+# Test data
 test-data/

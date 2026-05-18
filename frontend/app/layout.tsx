@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from '@/context/auth'
 import './globals.css'
 
@@ -10,7 +10,6 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: 'CarePath - Understand Your Medical Instructions Clearly',
   description: 'Turn complex healthcare documents into simple, actionable steps',
-  generator: 'v0.app',
   icons: {
     icon: [
       {

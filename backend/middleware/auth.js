@@ -19,17 +19,24 @@ async function authMiddleware(req, res, next) {
       return res.status(401).json({ error: 'Missing access token' });
     }
 
+    // Basic JWT structure check — must have 3 dot-separated parts
+    if (token.split('.').length !== 3) {
+      return res.status(401).json({ error: 'Malformed access token' });
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL || '';
+    const supabaseAnonKey =
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_SERVICE_KEY ||
+      '';
+
     // Create a Supabase client with the user's token to verify it
-    const supabase = createClient(
-      process.env.SUPABASE_URL || '',
-      process.env.SUPABASE_ANON_KEY || '',
-      {
-        global: {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        auth: { persistSession: false },
-      }
-    );
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+      auth: { persistSession: false },
+    });
 
     const {
       data: { user },
@@ -49,7 +56,7 @@ async function authMiddleware(req, res, next) {
 
     next();
   } catch (err) {
-    console.error('Auth middleware error:', err);
+    console.error('Auth middleware error:', { name: err.name });
     return res.status(500).json({ error: 'Authentication service error' });
   }
 }
