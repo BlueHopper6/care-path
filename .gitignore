@@ -2,6 +2,8 @@
 .env
 .env*.local
 .env.local
+.env.example
+*.env.example
 
 # v0 sandbox internal files
 __v0_runtime_loader.js
