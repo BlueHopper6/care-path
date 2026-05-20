@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const logger = require('./logger');
 
 // ---------------------------------------------------------------------------
 // Environment variables — standardized on Supabase's official naming
@@ -16,13 +17,13 @@ const SUPABASE_SERVICE_ROLE_KEY =
 const isConfigured = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 if (!isConfigured) {
-  console.warn(
+  logger.warn(
     '⚠️  Missing SUPABASE_URL or SUPABASE_ANON_KEY – Supabase features will not work.'
   );
 }
 
 if (isConfigured && !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn(
+  logger.warn(
     '⚠️  Missing SUPABASE_SERVICE_ROLE_KEY – Admin operations will fall back to the anon key (reduced privileges).'
   );
 }

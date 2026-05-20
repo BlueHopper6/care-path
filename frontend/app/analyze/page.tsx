@@ -45,7 +45,7 @@ export default function DashboardPage() {
         const prefs = await getPreferences(accessToken);
         if (prefs.auto_save_history) {
           // Auto-save silently
-          await saveRemoteAnalysis(data, response, accessToken).catch(console.error);
+          await saveRemoteAnalysis(data, response, accessToken).catch(() => {});
         } else {
           // Prompt user for consent
           setPendingSave({ request: data, response });
@@ -71,7 +71,7 @@ export default function DashboardPage() {
         await updatePreferences(true, session.access_token);
       }
     } catch (err) {
-      console.error("Failed to save via consent dialog:", err);
+      // Silently fail consent save in UI (or add a toast here in the future)
     } finally {
       setConsentSaving(false);
       setConsentOpen(false);

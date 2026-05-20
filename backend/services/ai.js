@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const logger = require('../utils/logger');
 
 // ---------------------------------------------------------------------------
 // Initialise Gemini
@@ -7,7 +8,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 if (!GEMINI_API_KEY) {
-  console.warn('⚠️  Missing GEMINI_API_KEY – AI analysis will not work.');
+  logger.warn('⚠️  Missing GEMINI_API_KEY – AI analysis will not work.');
 }
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
@@ -131,7 +132,7 @@ async function analyzeMedicalText(rawText, options = {}) {
     parsed = JSON.parse(cleaned);
   } catch {
     // Truncate logged response to prevent massive log entries
-    console.error('Failed to parse Gemini response:', cleaned.substring(0, 200));
+    logger.error('Failed to parse Gemini response:', { preview: cleaned.substring(0, 200) });
     throw new Error('AI returned an invalid response. Please try again.');
   }
 

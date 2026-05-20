@@ -1,4 +1,5 @@
 const multer = require('multer');
+const logger = require('../utils/logger');
 // Require the lib directly — pdf-parse v1.1.1's index.js crashes on modern
 // Node.js because `module.parent` is null, making it run debug/test code.
 const pdfParse = require('pdf-parse/lib/pdf-parse.js');
@@ -126,7 +127,7 @@ async function parseFile(req, res) {
       },
     });
   } catch (err) {
-    console.error('File parse error:', err.message);
+    logger.error('File parse error:', { message: err.message, stack: err.stack });
     // Never expose internal library error messages to the client
     const isTimeout = err.message?.includes('timed out');
     return res.status(isTimeout ? 408 : 500).json({
