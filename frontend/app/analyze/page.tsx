@@ -38,8 +38,7 @@ export default function DashboardPage() {
       const response = await analyzeText(data, accessToken);
       setResult(response);
 
-      // 2. Save locally for guest/quick access
-      saveToHistory(data, response);
+      // 2. Removed local storage save as per security requirements
 
       // 3. Handle authenticated user DB saving logic
       if (accessToken) {

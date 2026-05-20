@@ -45,6 +45,8 @@ export function Navbar() {
     ? { email: user.email ?? "", name: user.email?.split("@")[0] }
     : null;
 
+  const visibleNavItems = NAV_ITEMS.filter((item) => item.href !== "/history" || user);
+
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -59,7 +61,7 @@ export function Navbar() {
 
           {/* Center: Navigation */}
           <nav className="hidden items-center gap-1 md:flex">
-            {NAV_ITEMS.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
 
@@ -83,7 +85,7 @@ export function Navbar() {
           <div className="flex items-center gap-2">
             {/* Mobile nav items */}
             <nav className="flex items-center gap-1 md:hidden">
-              {NAV_ITEMS.map((item) => {
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
 
