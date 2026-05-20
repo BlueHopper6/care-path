@@ -117,7 +117,7 @@ export async function updatePreferences(
     },
     body: JSON.stringify({ auto_save_history: autoSave }),
   });
-  
+
   if (!response.ok) {
     throw new Error("Failed to update preferences");
   }
@@ -155,67 +155,4 @@ export async function fetchRemoteHistory(
   return json.data ?? [];
 }
 
-// ---------------------------------------------------------------------------
-// Local storage history (guest users)
-//
-// ⚠️  SECURITY NOTE: localStorage is unencrypted and accessible to any script
-// running on this origin. Guest analysis history stored here is convenience-only
-// and automatically expires after 24 hours. For persistent, secure storage,
-// users must sign in (data is stored server-side with RLS protection).
-// Never store raw JWTs or full medical documents in localStorage long-term.
-// ---------------------------------------------------------------------------
-
-const HISTORY_KEY = "carepath_history";
-const HISTORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-/**
- * Filter out expired history items based on the 24-hour TTL.
- */
-function filterExpiredItems(items: AnalysisHistoryItem[]): AnalysisHistoryItem[] {
-  const cutoff = Date.now() - HISTORY_TTL_MS;
-  return items.filter((item) => new Date(item.created_at).getTime() > cutoff);
-}
-
-export function saveToHistory(
-  request: AnalyzeRequest,
-  result: AnalyzeResponse
-): AnalysisHistoryItem {
-  const historyItem: AnalysisHistoryItem = {
-    id: crypto.randomUUID(),
-    ...request,
-    result,
-    created_at: new Date().toISOString(),
-  };
-
-  const existing = filterExpiredItems(getHistory());
-  const updated = [historyItem, ...existing].slice(0, 50);
-
-  if (typeof window !== "undefined") {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-  }
-
-  return historyItem;
-}
-
-export function getHistory(): AnalysisHistoryItem[] {
-  if (typeof window === "undefined") return [];
-  const stored = localStorage.getItem(HISTORY_KEY);
-  if (!stored) return [];
-  try {
-    const items: AnalysisHistoryItem[] = JSON.parse(stored);
-    return filterExpiredItems(items);
-  } catch {
-    return [];
-  }
-}
-
-export function getHistoryItem(id: string): AnalysisHistoryItem | undefined {
-  return getHistory().find((item) => item.id === id);
-}
-
-export function clearHistory(): void {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem(HISTORY_KEY);
-  }
-}
-
+// History is now exclusively saved to the database for authenticated users.

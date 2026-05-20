@@ -1,9 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { useAuth } from "@/context/auth";
 import { Button } from "@/components/ui/button";
 import { FileText, ListChecks, Shield, ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/carepath/navbar";
 
 export default function LandingPage() {
+  const { user } = useAuth();
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -33,11 +38,13 @@ export default function LandingPage() {
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/history">
-                <Button variant="outline" size="lg">
-                  View History
-                </Button>
-              </Link>
+              {user && (
+                <Link href="/history">
+                  <Button variant="outline" size="lg">
+                    View History
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </section>

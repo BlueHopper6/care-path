@@ -14,8 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { History, ChevronDown, ChevronUp, Trash2, FileText, Loader2 } from "lucide-react";
 import {
-  getHistory,
-  clearHistory,
   fetchRemoteHistory,
   type AnalysisHistoryItem,
   type BackendHistoryItem,
@@ -32,7 +30,7 @@ export default function HistoryPage() {
   const [isClient, setIsClient] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
-  // Load history — remote for logged-in users, localStorage for guests
+  // Load history — remote for logged-in users only
   useEffect(() => {
     setIsClient(true);
     if (authLoading) return;
@@ -59,22 +57,12 @@ export default function HistoryPage() {
           }));
           setHistory(mapped);
         })
-        .catch(() => {
-          // Fall back to localStorage on error
-          setHistory(getHistory());
-        })
+        .catch(console.error)
         .finally(() => setIsFetching(false));
     } else {
-      // Guest: use local storage
-      setHistory(getHistory());
+      setIsFetching(false);
     }
   }, [session, authLoading]);
-
-  const handleClearHistory = () => {
-    clearHistory();
-    setHistory([]);
-    setExpandedId(null);
-  };
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
@@ -101,6 +89,28 @@ export default function HistoryPage() {
     );
   }
 
+  // Not logged in -> access denied
+  if (!session) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 px-4 py-8">
+          <div className="container mx-auto max-w-3xl space-y-8">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Analysis History</h1>
+              <p className="text-muted-foreground">Sign in to view and save your analyses.</p>
+            </div>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground">Please sign in to access your private medical analysis history. Guest users do not have access to saved history for privacy and security reasons.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
@@ -114,23 +124,9 @@ export default function HistoryPage() {
                 Analysis History
               </h1>
               <p className="text-muted-foreground">
-                {session
-                  ? "Your saved analyses from your account."
-                  : "Your recent analyses (stored locally). Sign in to save across devices."}
+                Your saved analyses from your account.
               </p>
             </div>
-
-            {history.length > 0 && !session && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearHistory}
-                className="gap-2 self-start text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              >
-                <Trash2 className="h-4 w-4" />
-                Clear History
-              </Button>
-            )}
           </div>
 
           {/* History List */}
@@ -142,9 +138,7 @@ export default function HistoryPage() {
                 </EmptyMedia>
                 <EmptyTitle>No analysis history</EmptyTitle>
                 <EmptyDescription>
-                  {session
-                    ? "Your analyses will appear here after you analyze a document."
-                    : "Your previous analyses will appear here. Start by analyzing a medical document."}
+                  Your analyses will appear here after you analyze a document.
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
