@@ -22,7 +22,7 @@ export default function SettingsPage() {
     if (session?.access_token) {
       getPreferences(session.access_token)
         .then((prefs) => setAutoSave(prefs.auto_save_history))
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setIsFetching(false));
     } else {
       setIsFetching(false);
@@ -39,7 +39,7 @@ export default function SettingsPage() {
     try {
       await updatePreferences(checked, session.access_token);
     } catch (err) {
-      console.error("Failed to update preferences", err);
+      // Silently fail update in UI (or add a toast here in the future)
       // Revert if failed
       setAutoSave(!checked);
     } finally {

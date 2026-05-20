@@ -1,4 +1,5 @@
 require('dotenv').config();
+const logger = require('./utils/logger');
 
 const express = require('express');
 const cors = require('cors');
@@ -112,7 +113,7 @@ app.use((_req, res) => {
 app.use((err, _req, res, _next) => {
   // Log the error type and message only — never log full request body
   // which may contain PHI (Patient Health Information)
-  console.error('Unhandled error:', {
+  logger.error('Unhandled error:', {
     name: err.name,
     message: err.message,
     // Omit stack and request body to prevent PHI leakage in logs
@@ -128,8 +129,8 @@ app.use((err, _req, res, _next) => {
 // ---------------------------------------------------------------------------
 
 app.listen(PORT, () => {
-  console.log(`CarePath API running on http://localhost:${PORT}`);
-  console.log(`   Health check: http://localhost:${PORT}/api/health`);
+  logger.info(`CarePath API running on http://localhost:${PORT}`);
+  logger.info(`   Health check: http://localhost:${PORT}/api/health`);
 });
 
 module.exports = app;

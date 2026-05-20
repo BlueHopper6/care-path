@@ -57,7 +57,7 @@ export default function HistoryPage() {
           }));
           setHistory(mapped);
         })
-        .catch(console.error)
+        .catch(() => {})
         .finally(() => setIsFetching(false));
     } else {
       setIsFetching(false);

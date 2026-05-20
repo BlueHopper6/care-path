@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const logger = require('../utils/logger');
 
 /**
  * Authentication middleware.
@@ -56,7 +57,7 @@ async function authMiddleware(req, res, next) {
 
     next();
   } catch (err) {
-    console.error('Auth middleware error:', { name: err.name });
+    logger.error('Auth middleware error:', { name: err.name });
     return res.status(500).json({ error: 'Authentication service error' });
   }
 }

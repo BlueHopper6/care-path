@@ -1,4 +1,5 @@
 const { createUserClient } = require('../utils/supabase');
+const logger = require('../utils/logger');
 
 /**
  * POST /api/upload
@@ -22,7 +23,7 @@ async function uploadDocument(req, res) {
       .single();
 
     if (error) {
-      console.error('Upload error:', { code: error.code, hint: error.hint });
+      logger.error('Upload error:', { code: error.code, hint: error.hint });
       return res.status(500).json({ error: 'Failed to store document.' });
     }
 
@@ -34,7 +35,7 @@ async function uploadDocument(req, res) {
       },
     });
   } catch (err) {
-    console.error('Upload error:', { name: err.name, message: err.message });
+    logger.error('Upload error:', { name: err.name, message: err.message, stack: err.stack });
     return res.status(500).json({ error: 'Failed to upload document.' });
   }
 }
@@ -75,7 +76,7 @@ async function getHistory(req, res) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('History fetch error:', { code: error.code, hint: error.hint });
+      logger.error('History fetch error:', { code: error.code, hint: error.hint });
       return res.status(500).json({ error: 'Failed to fetch history.' });
     }
 
@@ -90,7 +91,7 @@ async function getHistory(req, res) {
       },
     });
   } catch (err) {
-    console.error('History error:', { name: err.name, message: err.message });
+    logger.error('History error:', { name: err.name, message: err.message, stack: err.stack });
     return res.status(500).json({ error: 'Failed to fetch history.' });
   }
 }

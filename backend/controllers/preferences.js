@@ -1,4 +1,5 @@
 const { createUserClient } = require('../utils/supabase');
+const logger = require('../utils/logger');
 
 /**
  * GET /api/preferences
@@ -15,7 +16,7 @@ async function getPreferences(req, res) {
       .maybeSingle();
 
     if (error) {
-      console.error('Error fetching preferences:', { code: error.code });
+      logger.error('Error fetching preferences:', { code: error.code });
       return res.status(500).json({ error: 'Failed to fetch preferences.' });
     }
 
@@ -27,7 +28,7 @@ async function getPreferences(req, res) {
       },
     });
   } catch (err) {
-    console.error('Preferences error:', { name: err.name, message: err.message });
+    logger.error('Preferences error:', { name: err.name, message: err.message });
     return res.status(500).json({ error: 'Failed to fetch preferences.' });
   }
 }
@@ -52,7 +53,7 @@ async function updatePreferences(req, res) {
       }, { onConflict: 'id' });
 
     if (error) {
-      console.error('Error updating preferences:', { code: error.code });
+      logger.error('Error updating preferences:', { code: error.code });
       return res.status(500).json({ error: 'Failed to update preferences.' });
     }
 
@@ -61,7 +62,7 @@ async function updatePreferences(req, res) {
       data: { auto_save_history: req.body.auto_save_history },
     });
   } catch (err) {
-    console.error('Preferences update error:', { name: err.name, message: err.message });
+    logger.error('Preferences update error:', { name: err.name, message: err.message });
     return res.status(500).json({ error: 'Failed to update preferences.' });
   }
 }

@@ -1,5 +1,6 @@
 const { analyzeMedicalText, DISCLAIMER } = require('../services/ai');
 const { createUserClient } = require('../utils/supabase');
+const logger = require('../utils/logger');
 
 /**
  * POST /api/analyze
@@ -29,7 +30,7 @@ async function analyzeText(req, res) {
     });
   } catch (err) {
     // Log error type only — never log raw medical text (PHI)
-    console.error('Analyze error:', { name: err.name, message: err.message });
+    logger.error('Analyze error:', { name: err.name, message: err.message, stack: err.stack });
     return res.status(500).json({
       error: 'Failed to analyze medical text.',
       disclaimer: DISCLAIMER,
@@ -61,7 +62,7 @@ async function saveAnalyzedText(req, res) {
         .single();
 
       if (docError) {
-        console.error('Error storing document:', { code: docError.code, hint: docError.hint });
+        logger.error('Error storing document:', { code: docError.code, hint: docError.hint });
         return res.status(500).json({ error: 'Failed to store document.' });
       }
 
@@ -81,7 +82,7 @@ async function saveAnalyzedText(req, res) {
         });
 
         if (analysisError) {
-          console.error('Error storing analysis:', { code: analysisError.code, hint: analysisError.hint });
+          logger.error('Error storing analysis:', { code: analysisError.code, hint: analysisError.hint });
           return res.status(500).json({ error: 'Failed to store analysis.' });
         }
       }
@@ -91,7 +92,7 @@ async function saveAnalyzedText(req, res) {
 
     return res.status(401).json({ error: 'Unauthorized' });
   } catch (err) {
-    console.error('Save error:', { name: err.name, message: err.message });
+    logger.error('Save error:', { name: err.name, message: err.message, stack: err.stack });
     return res.status(500).json({ error: 'Failed to save analysis.' });
   }
 }
