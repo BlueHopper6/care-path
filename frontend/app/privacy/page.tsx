@@ -12,9 +12,9 @@ export default function PrivacyPolicyPage() {
             <h1 className="text-4xl font-bold tracking-tight">Privacy Policy</h1>
             <p className="text-muted-foreground text-lg">Last Updated: {new Date().toLocaleDateString()}</p>
             
-            <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-6 text-destructive-foreground mt-6">
-              <h2 className="text-xl font-bold mb-2">CRITICAL NOTICE: NOT HIPAA COMPLIANT</h2>
-              <p className="font-semibold">
+            <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-6 mt-6">
+              <h2 className="text-xl font-bold mb-2 text-destructive">CRITICAL NOTICE: NOT HIPAA COMPLIANT</h2>
+              <p className="font-semibold text-foreground">
                 CarePath is an educational computer science project. It is absolutely NOT a HIPAA-compliant medical system. Do not upload Sensitive Personally Identifiable Information (PII) or Protected Health Information (PHI). By using this service, you acknowledge that you are using experimental software at your own risk.
               </p>
             </div>

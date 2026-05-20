@@ -7,7 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth";
 import { getPreferences, updatePreferences } from "@/lib/api";
-import { ShieldCheck, Loader2 } from "lucide-react";
+import { ShieldCheck, Loader2, FileText } from "lucide-react";
+import Link from "next/link";
 
 export default function SettingsPage() {
   const { session, loading: authLoading } = useAuth();
@@ -74,6 +75,26 @@ export default function SettingsPage() {
                 <p className="text-muted-foreground">Please sign in to view and manage your account settings.</p>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <CardTitle className="text-lg">Legal & Policies</CardTitle>
+                  <CardDescription>View our terms of service and privacy policy.</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <Link href="/terms" className="text-primary underline hover:text-primary/80 transition-colors">
+                  Terms of Service & Legal Disclaimer
+                </Link>
+                <Link href="/privacy" className="text-primary underline hover:text-primary/80 transition-colors">
+                  Privacy Policy
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </main>
       </div>
@@ -118,6 +139,26 @@ export default function SettingsPage() {
                   disabled={isUpdating}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <CardTitle className="text-lg">Legal & Policies</CardTitle>
+                <CardDescription>View our terms of service and privacy policy.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <Link href="/terms" className="text-primary underline hover:text-primary/80 transition-colors">
+                Terms of Service & Legal Disclaimer
+              </Link>
+              <Link href="/privacy" className="text-primary underline hover:text-primary/80 transition-colors">
+                Privacy Policy
+              </Link>
             </CardContent>
           </Card>
         </div>

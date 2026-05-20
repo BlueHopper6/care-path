@@ -12,9 +12,9 @@ export default function TermsPage() {
             <h1 className="text-4xl font-bold tracking-tight">Terms of Service & Legal Disclaimer</h1>
             <p className="text-muted-foreground text-lg">Last Updated: {new Date().toLocaleDateString()}</p>
             
-            <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-6 text-destructive-foreground mt-6">
-              <h2 className="text-xl font-bold mb-2">CRITICAL NOTICE: NOT MEDICAL ADVICE</h2>
-              <p className="font-semibold">
+            <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-6 mt-6">
+              <h2 className="text-xl font-bold mb-2 text-destructive">CRITICAL NOTICE: NOT MEDICAL ADVICE</h2>
+              <p className="font-semibold text-foreground">
                 CarePath is an educational computer science and hackathon project. It is absolutely NOT a medical device, diagnostic tool, or replacement for professional medical advice. By using this service, you acknowledge that you are using experimental software at your own risk.
               </p>
             </div>
