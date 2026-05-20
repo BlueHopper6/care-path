@@ -87,9 +87,12 @@ export default function LandingPage() {
       <footer className="border-t py-6">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground flex flex-col gap-2">
           <p>This tool does not provide medical advice. Always consult a healthcare professional.</p>
-          <p>
+          <p className="space-x-4">
             <Link href="/terms" className="underline hover:text-foreground transition-colors">
-              Read our full Terms of Service & Legal Disclaimer
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+              Privacy Policy
             </Link>
           </p>
         </div>

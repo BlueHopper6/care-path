@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/carepath/navbar";
+import Link from "next/link";
 
 export default function TermsPage() {
   return (
@@ -11,9 +12,9 @@ export default function TermsPage() {
             <h1 className="text-4xl font-bold tracking-tight">Terms of Service & Legal Disclaimer</h1>
             <p className="text-muted-foreground text-lg">Last Updated: {new Date().toLocaleDateString()}</p>
             
-            <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-6 text-destructive-foreground mt-6">
-              <h2 className="text-xl font-bold mb-2">CRITICAL NOTICE: NOT MEDICAL ADVICE</h2>
-              <p className="font-semibold">
+            <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-6 mt-6">
+              <h2 className="text-xl font-bold mb-2 text-destructive">CRITICAL NOTICE: NOT MEDICAL ADVICE</h2>
+              <p className="font-semibold text-foreground">
                 CarePath is an educational computer science and hackathon project. It is absolutely NOT a medical device, diagnostic tool, or replacement for professional medical advice. By using this service, you acknowledge that you are using experimental software at your own risk.
               </p>
             </div>
@@ -100,8 +101,16 @@ export default function TermsPage() {
       </main>
 
       <footer className="border-t py-6 mt-auto">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>CarePath - Educational Project</p>
+        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground flex flex-col gap-2">
+          <p>This tool does not provide medical advice. Always consult a healthcare professional.</p>
+          <p className="space-x-4">
+            <Link href="/terms" className="underline hover:text-foreground transition-colors">
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+          </p>
         </div>
       </footer>
     </div>
