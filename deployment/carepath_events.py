@@ -18,7 +18,7 @@ import time
 MAX_BODY = 262144
 MAX_HEADERS = 16384
 PATH = "/hooks/carepath/publication"
-REPOSITORY = "bluehopper6/carepath"
+REPOSITORY = "bluehopper6/care-path"
 
 
 class Refused(Exception):

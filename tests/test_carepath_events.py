@@ -19,7 +19,7 @@ def sign(raw):
 
 
 class CarePathEventsTests(unittest.TestCase):
-    def _payload(self, *, repo="BlueHopper6/CarePath", path=".github/workflows/deploy.yaml", attempt=1):
+    def _payload(self, *, repo="BlueHopper6/care-path", path=".github/workflows/deploy.yaml", attempt=1):
         now = dt.datetime(2026, 11, 17, 0, 0, tzinfo=dt.timezone.utc)
         body = {
             "action": "completed",

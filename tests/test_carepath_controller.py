@@ -12,7 +12,7 @@ RUNTIME_HASH = "f" * 64
 def make_manifest(run_id, rev_char):
     return {
         "schemaVersion": 1,
-        "repository": "bluehopper6/carepath",
+        "repository": "bluehopper6/care-path",
         "revision": rev_char * 40,
         "verificationRunId": str(int(run_id) - 10),
         "releaseRunId": str(run_id),

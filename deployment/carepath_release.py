@@ -18,7 +18,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-REPOSITORY = "bluehopper6/carepath"
+REPOSITORY = "bluehopper6/care-path"
 API = "https://api.github.com/repos/" + REPOSITORY
 FRONTEND_IMAGE = "ghcr.io/bluehopper6/carepath-frontend"
 BACKEND_IMAGE = "ghcr.io/bluehopper6/carepath-backend"

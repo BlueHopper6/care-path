@@ -20,7 +20,7 @@ def sample_route(slot, gen):
             "slot": slot,
             "manifest": {
                 "schemaVersion": 1,
-                "repository": "bluehopper6/carepath",
+                "repository": "bluehopper6/care-path",
                 "revision": "a" * 40,
                 "verificationRunId": "10",
                 "releaseRunId": "20",

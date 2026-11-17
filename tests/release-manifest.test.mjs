@@ -36,24 +36,24 @@ test('createReleaseManifest binds frontend and backend digests', () => {
   const feDigest = 'sha256:' + '1'.repeat(64);
   const beDigest = 'sha256:' + '2'.repeat(64);
   const manifest = createReleaseManifest({
-    repository: 'BlueHopper6/CarePath',
+    repository: 'BlueHopper6/care-path',
     revision: sha,
     verificationRunId: '100',
     releaseRunId: '200',
     frontendDigests: [`ghcr.io/bluehopper6/carepath-frontend@${feDigest}`],
     backendDigests: [`ghcr.io/bluehopper6/carepath-backend@${beDigest}`],
   });
-  assert.equal(manifest.repository, 'bluehopper6/carepath');
+  assert.equal(manifest.repository, 'bluehopper6/care-path');
   assert.equal(manifest.frontend.digest, feDigest);
   assert.equal(manifest.backend.digest, beDigest);
 });
 
 test('assertPrivatePackages enforces private visibility for both packages', async () => {
   const makeFetch = (backendVis) => async (url) => {
-    if (url.endsWith('/repos/bluehopper6/carepath')) {
+    if (url.endsWith('/repos/bluehopper6/care-path')) {
       return new Response(
         JSON.stringify({
-          full_name: 'BlueHopper6/CarePath',
+          full_name: 'BlueHopper6/care-path',
           owner: { login: 'BlueHopper6', type: 'User' },
         }),
         { status: 200 }
@@ -76,7 +76,7 @@ test('assertPrivatePackages enforces private visibility for both packages', asyn
 
   assert.equal(
     await assertPrivatePackages({
-      repository: 'BlueHopper6/CarePath',
+      repository: 'BlueHopper6/care-path',
       token: 'tok',
       mustExist: true,
       fetchImpl: makeFetch('private'),
@@ -86,7 +86,7 @@ test('assertPrivatePackages enforces private visibility for both packages', asyn
 
   await assert.rejects(() =>
     assertPrivatePackages({
-      repository: 'BlueHopper6/CarePath',
+      repository: 'BlueHopper6/care-path',
       token: 'tok',
       mustExist: true,
       fetchImpl: makeFetch('public'),

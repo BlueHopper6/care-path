@@ -39,7 +39,7 @@ def manifest_check(manifest):
         and set(manifest) == {"schemaVersion", "repository", "revision", "verificationRunId", "releaseRunId", "frontend", "backend"},
         "Invalid manifest shape.",
     )
-    require(manifest["schemaVersion"] == 1 and manifest["repository"] == "bluehopper6/carepath", "Invalid manifest repository.")
+    require(manifest["schemaVersion"] == 1 and manifest["repository"] == "bluehopper6/care-path", "Invalid manifest repository.")
     require(isinstance(manifest["revision"], str) and bool(re.fullmatch(r"[a-f0-9]{40}", manifest["revision"])), "Invalid manifest revision.")
     for key in ("frontend", "backend"):
         part = manifest[key]
