@@ -51,7 +51,7 @@ class CarePathReleaseTests(unittest.TestCase):
         }
         raw_zip, zip_digest = make_zip(manifest)
         responses = {
-            "": {"full_name": "BlueHopper6/CarePath", "default_branch": "main", "private": False},
+            "": {"full_name": "BlueHopper6/care-path", "default_branch": "main", "private": False},
             "/git/ref/heads/main": {"object": {"sha": SHA_A}},
             "/actions/runs/200": {
                 "id": 200,
