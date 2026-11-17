@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { BackendProxyError, fetchBackend } from "@/lib/backend";
 
 // Map ISO 639-1 language codes to full language names for the AI prompt
 const LANGUAGE_MAP: Record<string, string> = {
@@ -16,7 +17,6 @@ const LANGUAGE_MAP: Record<string, string> = {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
     // Normalize mode: frontend sends "detailed", backend expects "default"
     const normalizedMode = data.mode === "simple" ? "simple" : "default";
@@ -25,62 +25,42 @@ export async function POST(request: NextRequest) {
     const normalizedLanguage =
       LANGUAGE_MAP[data.language] ?? data.language ?? "English";
 
-    // Forward the Authorization header so the backend can authenticate
-    // and save the analysis to the database for logged-in users
-    const authHeader = request.headers.get("authorization");
-    const outboundHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (authHeader) {
-      outboundHeaders["Authorization"] = authHeader;
-    }
-
-    const response = await fetch(`${apiUrl}/api/analyze`, {
+    const json = (await fetchBackend(request, "/api/analyze", {
       method: "POST",
-      headers: outboundHeaders,
+      timeoutMs: 75000,
       body: JSON.stringify({
         raw_text: data.raw_text,
         mode: normalizedMode,
         language: normalizedLanguage,
       }),
-    });
+    })) as { data?: Record<string, unknown> } & Record<string, unknown>;
 
-    if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      throw new Error(errBody.error || `Backend error: ${response.statusText}`);
-    }
+    const inner = (json.data ?? json) as Record<string, unknown>;
 
-    // Backend wraps response in { success: true, data: { ... } }
-    const json = await response.json();
-    const inner = json.data ?? json;
-
-    // Normalize shape — guarantee all fields exist so components never crash
     const normalized = {
-      summary: inner.summary ?? "No summary available.",
+      summary: typeof inner.summary === "string" ? inner.summary : "No summary available.",
       action_plan: Array.isArray(inner.action_plan) ? inner.action_plan : [],
       recurring_tasks: Array.isArray(inner.recurring_tasks) ? inner.recurring_tasks : [],
       questions_for_doctor: Array.isArray(inner.questions_for_doctor)
         ? inner.questions_for_doctor
         : [],
-      warning_signs: Array.isArray(inner.warning_signs)
-        ? inner.warning_signs
-        : [],
-      confidence_level: inner.confidence_level ?? "medium",
-      disclaimer: inner.disclaimer,
+      warning_signs: Array.isArray(inner.warning_signs) ? inner.warning_signs : [],
+      confidence_level:
+        typeof inner.confidence_level === "string" ? inner.confidence_level : "medium",
+      disclaimer: typeof inner.disclaimer === "string" ? inner.disclaimer : undefined,
     };
 
     return NextResponse.json(normalized);
   } catch (err) {
-    console.error("[CarePath API route error]", err);
-
-    // Never forward raw backend error messages — they may leak internal details
-    const safeMessage =
-      err instanceof Error && !err.message.includes("Backend error")
-        ? err.message
-        : "Failed to analyze medical text. Please try again.";
+    if (err instanceof BackendProxyError) {
+      return NextResponse.json(
+        { error: err.status < 500 ? err.message : "Failed to analyze medical text. Please try again." },
+        { status: err.status }
+      );
+    }
 
     return NextResponse.json(
-      { error: safeMessage },
+      { error: "Failed to analyze medical text. Please try again." },
       { status: 500 }
     );
   }

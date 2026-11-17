@@ -1,6 +1,4 @@
 const winston = require('winston');
-require('winston-daily-rotate-file');
-const path = require('path');
 
 const { combine, timestamp, json, colorize, printf, errors } = winston.format;
 
@@ -13,27 +11,33 @@ const levels = {
   debug: 4,
 };
 
-// Global format setup
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Redact stack traces in production to prevent internal/PHI leakage
+const stripStackInProd = winston.format((info) => {
+  if (isProduction && 'stack' in info) {
+    delete info.stack;
+  }
+  return info;
+});
+
 const globalFormat = combine(
-  errors({ stack: true }),
+  errors({ stack: !isProduction }),
+  stripStackInProd(),
   timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   json()
 );
 
 const transports = [];
 
-if (process.env.NODE_ENV === 'production') {
-  // Production Environment: File Logging only (suppress console to save CPU and avoid stdout leakage)
-  const fileRotateTransport = new winston.transports.DailyRotateFile({
-    dirname: path.resolve(process.cwd(), 'logs'),
-    filename: 'care-path-%DATE%.log',
-    datePattern: 'YYYY-MM-DD',
-    zippedArchive: true,
-    maxSize: '20m',
-    maxFiles: '14d',
-  });
-  
-  transports.push(fileRotateTransport);
+if (isProduction) {
+  // Log structured JSON to stdout so --read-only rootfs works and Docker's
+  // bounded local log driver manages rotation without container disk growth.
+  transports.push(
+    new winston.transports.Console({
+      format: globalFormat,
+    })
+  );
 } else {
   // Development Environment: Console Logging only
   const devFormat = combine(

@@ -1,0 +1,37 @@
+[Unit]
+Description=Authenticated CarePath publication notifications
+After=network.target
+
+[Service]
+Type=exec
+User=carepath-events
+Group=carepath-events
+LoadCredential=webhook-secret:/etc/carepath-events/private/webhook-secret
+StateDirectory=carepath-events
+StateDirectoryMode=0700
+ExecStart=/usr/bin/python3 -I -B /opt/carepath/carepath_events.py
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+PrivateTmp=yes
+PrivateDevices=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+InaccessiblePaths=/etc/carepath /etc/carepath-rollout /var/lib/carepath-deployer /etc/life-compass /etc/life-compass-rollout /var/lib/life-compass-deployer -/run/docker.sock -/var/run/docker.sock -/etc/h2-backend-tunnel/private -/etc/life-compass-events/private -/etc/carepath-events/private -/run/dbus/system_bus_socket -/run/systemd/private
+MemoryMax=64M
+TasksMax=16
+LimitNOFILE=64
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

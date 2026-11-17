@@ -1,0 +1,11 @@
+[Unit]
+Description=Reconcile missed CarePath publication notifications
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=30min
+RandomizedDelaySec=2min
+Unit=carepath-rollout.service
+
+[Install]
+WantedBy=timers.target

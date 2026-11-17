@@ -28,11 +28,11 @@ CarePath uses a decoupled client-server architecture with a secure data layer:
 
 | Layer | Stack |
 |-------|-------|
-| **Frontend** | Next.js 16 (App Router), Tailwind CSS 4, TypeScript, Radix UI, shadcn/ui, React Hook Form, Zod |
-| **Backend** | Node.js 20, Express.js, Zod validation, Helmet, express-rate-limit |
+| **Frontend** | Next.js 16 (App Router, Standalone), Tailwind CSS 4, TypeScript, Radix UI, shadcn/ui, React Hook Form, Zod |
+| **Backend** | Node.js 24, Express.js, Zod validation, Helmet, express-rate-limit |
 | **Database & Auth** | Supabase (PostgreSQL with Row Level Security, JWT Auth) |
 | **AI** | Google Gemini API (gemini-2.5-flash) |
-| **Infrastructure** | Docker Compose, Cloudflare Tunnels |
+| **Infrastructure** | Immutable GHCR images, isolated VM blue/green slots, Traefik file-provider, Cloudflare Tunnel |
 
 ---
 
@@ -129,28 +129,32 @@ npm run dev
 
 ### Environment Variables
 
-#### Root `.env` (Docker Compose)
+#### Local Compose `.env` and Production Split
+
+Production builds accept public frontend variables only (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Runtime secrets stay outside images in root-owned guest env files (`/etc/carepath/frontend.env` and `/etc/carepath/backend.env`).
 
 | Variable | Description | Used By |
 |----------|-------------|---------|
-| `FRONTEND_URL` | Frontend domain for CORS | Backend |
-| `NEXT_PUBLIC_API_URL` | Backend API URL | Frontend |
-| `SUPABASE_URL` | Supabase project URL | Backend |
-| `SUPABASE_ANON_KEY` | Supabase anon/public key | Backend |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Backend |
-| `GEMINI_API_KEY` | Google Gemini API key | Backend |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL (client) | Frontend |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (client) | Frontend |
+| `FRONTEND_URL` | Canonical frontend origin for CORS (`https://carepath.vilohit.dev`) | Backend (runtime) |
+| `INTERNAL_API_URL` | Server-only internal backend URL (`http://carepath-backend-{slot}:3000`) | Frontend Route Handlers (runtime) |
+| `SUPABASE_URL` | Supabase project URL | Backend (runtime) |
+| `SUPABASE_ANON_KEY` | Supabase anon/public key | Backend (runtime) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Backend (runtime) |
+| `GEMINI_API_KEY` | Google Gemini API key | Backend (runtime) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL (browser client) | Frontend (build + runtime) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (browser client) | Frontend (build + runtime) |
 
-### Docker Compose Deployment
+### Production VM Deployment & CI/CD
+
+- **CI Verification (`.github/workflows/verify.yaml`)**: Runs backend tests (`node --test`), frontend TypeScript and standalone Next.js build, Python guest verifier/controller/receiver unit and Traefik integration tests, `npm audit --omit=dev`, `gitleaks`, and Trivy container scans on both images.
+- **Image Publication (`.github/workflows/deploy.yaml`)**: Opt-in via repository variable `RELEASE_IMAGES_ENABLED=true`. Builds and scans immutable `linux/amd64` images (`carepath-frontend` and `carepath-backend`) from verified `main` commits, verifies private GHCR package visibility, and uploads `carepath-release` (`release.json`).
+- **Guest Rollout (`deployment/`)**: Administrator-installed Python standard-library scripts verify GitHub provenance and artifact digests, pull both images, stage an isolated blue/green pair (`carepath-blue-net` / `carepath-green-net`), validate `/api/health` readiness, switch a dedicated unprivileged Traefik file-provider (`127.0.0.1:3400`), observe health for 30s (rolling back on regression), and drain the prior slot for 70s.
+
+### Docker Compose Deployment (Local Reference)
 
 ```bash
-# Build and start all services
 docker compose up --build -d
-
-# Services:
-# - Backend:  http://localhost:3000
-# - Frontend: http://localhost:5173
+# Frontend binds 127.0.0.1:5173 -> container 3000; backend stays internal on carepath-network
 ```
 
 ---

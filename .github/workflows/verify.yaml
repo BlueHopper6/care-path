@@ -1,0 +1,143 @@
+name: Verify
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '23 9 * * 1'
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install and test backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm test
+      - name: Install, lint, and build frontend
+        working-directory: frontend
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: public-build-placeholder
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm run build
+      - name: Release manifest and guest verifier/controller/receiver unit tests
+        run: |
+          node --test tests/release-manifest.test.mjs
+          python3 -B -m unittest discover -s tests -p 'test_carepath_*.py' -v
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Backend dependency advisory gate
+        working-directory: backend
+        run: |
+          npm ci --ignore-scripts
+          npm audit --omit=dev --audit-level=moderate
+      - name: Frontend dependency advisory gate
+        working-directory: frontend
+        run: |
+          npm ci --ignore-scripts
+          npm audit --omit=dev --audit-level=moderate
+      - name: Redacted git history secret scan
+        run: |
+          docker run --rm --network=none --read-only --cap-drop=ALL --security-opt=no-new-privileges \
+            --user "$(id -u):$(id -g)" --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            -v "$PWD:/repo:ro" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git /repo --redact=100 --log-level=fatal --log-opts=--all
+
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: checks
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Build backend image without private credentials
+        run: docker build -t carepath-backend:audit ./backend
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: carepath-backend:audit
+          scanners: vuln,misconfig
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          format: table
+      - name: Build frontend image without private credentials
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=public-build-placeholder \
+            -t carepath-frontend:audit ./frontend
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: carepath-frontend:audit
+          scanners: vuln,misconfig
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          format: table
+
+  rollout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Install pinned Traefik binary for isolated proxy tests
+        run: |
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            https://github.com/traefik/traefik/releases/download/v3.7.18/traefik_v3.7.18_linux_amd64.tar.gz -o /tmp/traefik.tar.gz
+          echo 'bc7e1e520c2d628b784e4e9c19bb259914082d5a70a27d509911caac5df18091  /tmp/traefik.tar.gz' | sha256sum --check
+          tar -xzf /tmp/traefik.tar.gz -C /tmp traefik
+      - name: Run isolated CarePath Traefik router and controller integration tests
+        env:
+          CAREPATH_TRAEFIK_TEST: '1'
+          TRAEFIK_BINARY: /tmp/traefik
+        run: python3 -B -m unittest discover -s tests -p 'test_carepath_*.py' -v
+
+  verified:
+    runs-on: ubuntu-latest
+    needs: [checks, security, images, rollout]
+    if: always()
+    timeout-minutes: 1
+    steps:
+      - env:
+          CHECKS: ${{ needs.checks.result }}
+          SECURITY: ${{ needs.security.result }}
+          IMAGES: ${{ needs.images.result }}
+          ROLLOUT: ${{ needs.rollout.result }}
+        run: test "$CHECKS" = success && test "$SECURITY" = success && test "$IMAGES" = success && test "$ROLLOUT" = success

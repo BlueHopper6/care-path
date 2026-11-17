@@ -1,18 +1,33 @@
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
+  require('dotenv').config();
+}
 const logger = require('./utils/logger');
 
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 const apiRoutes = require('./routes/api');
+const { hasValidSupabaseConfig } = require('./utils/supabase');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+/**
+ * Evaluate runtime configuration readiness without invoking Gemini or leaking secrets.
+ * @returns {boolean} True when required runtime settings are present and valid.
+ */
+function isServiceReady() {
+  const hasGemini = Boolean(process.env.GEMINI_API_KEY);
+  const hasSupabase = hasValidSupabaseConfig();
+  const hasFrontendOrigin =
+    process.env.NODE_ENV !== 'production' || Boolean(process.env.FRONTEND_URL);
+  return hasGemini && hasSupabase && hasFrontendOrigin;
+}
+
 // ---------------------------------------------------------------------------
-// Trust Proxy — required for correct client IP detection behind
-// reverse proxies (Cloudflare, nginx, Docker networking).
+// Trust Proxy — trust immediate proxy hop (Next.js server proxy / Cloudflare)
 // ---------------------------------------------------------------------------
 
 app.set('trust proxy', 1);
@@ -93,9 +108,15 @@ app.locals.computeLimiter = computeLimiter;
 // Routes
 // ---------------------------------------------------------------------------
 
-// Health check
+// Health check — checks required runtime configuration without invoking Gemini
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const ready = isServiceReady();
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ok' : 'degraded',
+    ready,
+    revision: process.env.APP_REVISION || null,
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // API routes
@@ -111,12 +132,22 @@ app.use((_req, res) => {
 // ---------------------------------------------------------------------------
 
 app.use((err, _req, res, _next) => {
-  // Log the error type and message only — never log full request body
-  // which may contain PHI (Patient Health Information)
+  if (err instanceof multer.MulterError) {
+    const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    const message =
+      err.code === 'LIMIT_FILE_SIZE'
+        ? 'File exceeds the 5 MB upload limit.'
+        : 'Invalid file upload request.';
+    return res.status(status).json({ error: message });
+  }
+
+  if (err && err.statusCode === 400) {
+    return res.status(400).json({ error: err.message || 'Invalid request.' });
+  }
+
+  // Log the error type only — never log full request body or stack traces
   logger.error('Unhandled error:', {
-    name: err.name,
-    message: err.message,
-    // Omit stack and request body to prevent PHI leakage in logs
+    name: err?.name || 'Error',
   });
 
   res.status(500).json({
@@ -128,9 +159,19 @@ app.use((err, _req, res, _next) => {
 // Start
 // ---------------------------------------------------------------------------
 
-app.listen(PORT, () => {
-  logger.info(`CarePath API running on http://localhost:${PORT}`);
-  logger.info(`   Health check: http://localhost:${PORT}/api/health`);
-});
+if (require.main === module) {
+  const server = app.listen(PORT, () => {
+    logger.info(`CarePath API listening on port ${PORT}`);
+  });
+  server.requestTimeout = 90000;
+  server.headersTimeout = 60000;
+  server.keepAliveTimeout = 65000;
 
-module.exports = app;
+  const shutdown = () => {
+    server.close(() => process.exit(0));
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}
+
+module.exports = { app, isServiceReady };

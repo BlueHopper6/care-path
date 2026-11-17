@@ -1,0 +1,198 @@
+name: Publish verified images
+on:
+  workflow_run:
+    workflows: [Verify]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: production-image-publication
+  cancel-in-progress: false
+jobs:
+  trusted-revision:
+    if: >-
+      vars.RELEASE_IMAGES_ENABLED == 'true' &&
+      ((github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      verification_run_id: ${{ steps.resolve.outputs.verification_run_id }}
+    steps:
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - id: resolve
+        name: Verify successful trusted main checks
+        env:
+          GH_READ_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const repository = process.env.REPOSITORY;
+          if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw Error('Invalid repository.');
+          const get = async (path) => {
+            const response = await fetch(`https://api.github.com/repos/${repository}/${path}`, {
+              headers: { Authorization: `Bearer ${process.env.GH_READ_TOKEN}`, Accept: 'application/vnd.github+json' },
+              signal: AbortSignal.timeout(10000),
+            });
+            if (!response.ok) throw Error('Verification metadata unavailable.');
+            return response.json();
+          };
+          const valid = (run) =>
+            Number.isSafeInteger(run?.id) &&
+            run.id > 0 &&
+            run.conclusion === 'success' &&
+            run.status === 'completed' &&
+            run.head_branch === 'main' &&
+            run.head_repository?.full_name?.toLowerCase() === repository.toLowerCase() &&
+            ['push', 'workflow_dispatch', 'schedule'].includes(run.event) &&
+            run.path === '.github/workflows/verify.yaml' &&
+            /^[a-f0-9]{40}$/.test(run.head_sha);
+
+          let verified;
+          if (process.env.EVENT_NAME === 'workflow_run') {
+            if (!/^\d+$/.test(process.env.RUN_ID || '')) throw Error('Invalid verification run.');
+            verified = await get(`actions/runs/${process.env.RUN_ID}`);
+            if (String(verified.id) !== process.env.RUN_ID) throw Error('Verification run identity mismatch.');
+            if (verified.event !== 'push') throw Error('Automatic publication requires a verified main push.');
+          } else {
+            if (!/^[a-f0-9]{40}$/.test(process.env.EVENT_SHA || '')) throw Error('Invalid revision.');
+            const result = await get(`actions/workflows/verify.yaml/runs?head_sha=${process.env.EVENT_SHA}&status=success&per_page=30`);
+            verified = result.workflow_runs.find((run) => valid(run) && run.head_sha === process.env.EVENT_SHA);
+          }
+
+          if (!valid(verified)) throw Error('This revision has no successful trusted verification.');
+          const main = await get('git/ref/heads/main');
+          if (main.object.sha !== verified.head_sha) {
+            console.log('Skipping a superseded verified revision.');
+            process.exit(0);
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `sha=${verified.head_sha}\nverification_run_id=${verified.id}\n`);
+          NODE
+
+  publish:
+    needs: trusted-revision
+    if: needs.trusted-revision.outputs.sha != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.trusted-revision.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Validate public frontend build inputs
+        env:
+          PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: node scripts/release-manifest.mjs check-public-config
+      - id: images
+        name: Select fixed registry repositories
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          [[ "$owner" =~ ^[a-z0-9-]+$ ]]
+          printf 'frontend=ghcr.io/%s/carepath-frontend\n' "$owner" >> "$GITHUB_OUTPUT"
+          printf 'backend=ghcr.io/%s/carepath-backend\n' "$owner" >> "$GITHUB_OUTPUT"
+      - name: Build production backend image without secrets
+        env:
+          IMAGE: ${{ steps.images.outputs.backend }}
+          VERIFIED_SHA: ${{ needs.trusted-revision.outputs.sha }}
+        run: |
+          docker build --platform linux/amd64 \
+            --build-arg "APP_REVISION=$VERIFIED_SHA" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$VERIFIED_SHA" \
+            -t "$IMAGE:$VERIFIED_SHA" ./backend
+      - name: Build production frontend image with public config only
+        env:
+          IMAGE: ${{ steps.images.outputs.frontend }}
+          VERIFIED_SHA: ${{ needs.trusted-revision.outputs.sha }}
+          PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          docker build --platform linux/amd64 \
+            --build-arg "APP_REVISION=$VERIFIED_SHA" \
+            --build-arg "NEXT_PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL" \
+            --build-arg "NEXT_PUBLIC_SUPABASE_ANON_KEY=$PUBLIC_SUPABASE_KEY" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$VERIFIED_SHA" \
+            -t "$IMAGE:$VERIFIED_SHA" ./frontend
+      - name: Scan backend release image
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: ${{ steps.images.outputs.backend }}:${{ needs.trusted-revision.outputs.sha }}
+          scanners: vuln,misconfig
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          format: table
+      - name: Scan frontend release image
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: ${{ steps.images.outputs.frontend }}:${{ needs.trusted-revision.outputs.sha }}
+          scanners: vuln,misconfig
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          format: table
+      - id: current
+        name: Skip superseded queued image publication
+        env:
+          GH_READ_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          VERIFIED_SHA: ${{ needs.trusted-revision.outputs.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const response = await fetch(`https://api.github.com/repos/${process.env.REPOSITORY}/git/ref/heads/main`, {
+            headers: { Authorization: `Bearer ${process.env.GH_READ_TOKEN}` },
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!response.ok) throw Error('Cannot verify current main revision.');
+          const current = (await response.json()).object.sha === process.env.VERIFIED_SHA;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `is_current=${current}\n`);
+          NODE
+      - name: Publish private release images and manifest
+        if: steps.current.outputs.is_current == 'true'
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
+          BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
+          VERIFIED_SHA: ${{ needs.trusted-revision.outputs.sha }}
+          VERIFICATION_RUN_ID: ${{ needs.trusted-revision.outputs.verification_run_id }}
+        run: |
+          umask 077
+          node scripts/release-manifest.mjs check-registry-visibility
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$BACKEND_IMAGE:$VERIFIED_SHA"
+          docker push "$FRONTEND_IMAGE:$VERIFIED_SHA"
+          node scripts/release-manifest.mjs check-published-visibility
+          docker image inspect --format '{{json .RepoDigests}}' "$FRONTEND_IMAGE:$VERIFIED_SHA" > frontend-digests.json
+          docker image inspect --format '{{json .RepoDigests}}' "$BACKEND_IMAGE:$VERIFIED_SHA" > backend-digests.json
+          node scripts/release-manifest.mjs write
+      - name: Store release identity for the guest verifier
+        if: steps.current.outputs.is_current == 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: carepath-release
+          path: release.json
+          retention-days: 3
+          if-no-files-found: error
+      - name: Remove ephemeral registry login
+        if: always()
+        run: docker logout ghcr.io

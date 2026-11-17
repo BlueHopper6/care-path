@@ -8,7 +8,7 @@ import { OutputCardsLoader } from "@/components/carepath/loader";
 import { Disclaimer } from "@/components/carepath/disclaimer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { analyzeText, saveToHistory, saveRemoteAnalysis, getPreferences, updatePreferences, type AnalyzeResponse, type AnalyzeRequest } from "@/lib/api";
+import { analyzeText, saveRemoteAnalysis, getPreferences, updatePreferences, type AnalyzeResponse, type AnalyzeRequest } from "@/lib/api";
 import { useAuth } from "@/context/auth";
 import { ExportButton } from "@/components/carepath/export-button";
 import { SaveConsentDialog } from "@/components/carepath/save-consent-dialog";

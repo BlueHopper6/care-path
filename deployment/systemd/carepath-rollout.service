@@ -1,0 +1,23 @@
+[Unit]
+Description=Verify and promote current-main CarePath publication
+Requires=docker.service carepath-router.service
+After=network-online.target docker.service carepath-router.service
+Wants=network-online.target
+ConditionPathExists=/etc/carepath-rollout/enabled
+StartLimitIntervalSec=5min
+StartLimitBurst=10
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 -I -B /opt/carepath/carepath_rollout.py worker
+TimeoutStartSec=15min
+TimeoutStopSec=30
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/carepath-deployer /var/lib/carepath-events /etc/carepath-router
+RestrictSUIDSGID=yes
+InaccessiblePaths=/etc/life-compass /etc/life-compass-rollout /var/lib/life-compass-deployer -/etc/h2-backend-tunnel/private -/etc/life-compass-events/private -/etc/carepath-events/private

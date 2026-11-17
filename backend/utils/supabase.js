@@ -57,4 +57,14 @@ function createUserClient(accessToken) {
   });
 }
 
-module.exports = { supabaseAdmin, createUserClient, isConfigured };
+function hasValidSupabaseConfig() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+  try {
+    const parsed = new URL(SUPABASE_URL);
+    return parsed.protocol === 'https:' || (process.env.NODE_ENV !== 'production' && parsed.protocol === 'http:');
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { supabaseAdmin, createUserClient, isConfigured, hasValidSupabaseConfig };

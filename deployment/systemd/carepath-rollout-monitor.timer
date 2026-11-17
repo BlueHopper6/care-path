@@ -1,0 +1,10 @@
+[Unit]
+Description=Check CarePath release health each minute
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1min
+Unit=carepath-rollout-monitor.service
+
+[Install]
+WantedBy=timers.target

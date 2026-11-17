@@ -35,7 +35,7 @@ async function uploadDocument(req, res) {
       },
     });
   } catch (err) {
-    logger.error('Upload error:', { name: err.name, message: err.message, stack: err.stack });
+    logger.error('Upload error:', { name: err.name });
     return res.status(500).json({ error: 'Failed to upload document.' });
   }
 }
@@ -91,7 +91,7 @@ async function getHistory(req, res) {
       },
     });
   } catch (err) {
-    logger.error('History error:', { name: err.name, message: err.message, stack: err.stack });
+    logger.error('History error:', { name: err.name });
     return res.status(500).json({ error: 'Failed to fetch history.' });
   }
 }
