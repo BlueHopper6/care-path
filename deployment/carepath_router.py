@@ -142,6 +142,7 @@ class Router:
         tmp = self.config_path.with_name(f".routes.{os.getpid()}.tmp")
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
         try:
+            os.fchmod(fd, 0o644)
             with os.fdopen(fd, "wb") as stream:
                 stream.write(payload)
                 stream.flush()

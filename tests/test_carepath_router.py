@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 import tempfile
@@ -48,6 +49,26 @@ class CarePathRouterTests(unittest.TestCase):
             payload["http"]["services"][f"active-{router_mod.route_hash(route)}"]["loadBalancer"]["servers"][0]["url"],
             "http://127.0.0.1:3301",
         )
+
+    @unittest.skipUnless(os.name == "posix", "POSIX file mode/umask test.")
+    def test_write_config_preserves_0644_under_umask_0077(self):
+        class FakeG:
+            def trusted_path(self, *args, **kwargs):
+                return None
+
+            def sync_directory(self, *args, **kwargs):
+                return None
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = Path(tmp) / "routes.yml"
+            router = router_mod.Router(ctrl, FakeG(), binary_hash=None, config_path=cfg, expected_uid=None)
+            old_umask = os.umask(0o077)
+            try:
+                router._write_config(b"{}")
+            finally:
+                os.umask(old_umask)
+            if os.name == "posix":
+                self.assertEqual(stat.S_IMODE(cfg.stat().st_mode), 0o644)
 
     @unittest.skipUnless(os.environ.get("CAREPATH_TRAEFIK_TEST") == "1", "Real Traefik binary test enabled in CI.")
     def test_real_traefik_file_provider_reload(self):
