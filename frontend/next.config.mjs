@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
+  poweredByHeader: false,
   // TypeScript errors MUST surface during builds — do not suppress
   typescript: {
     ignoreBuildErrors: false,

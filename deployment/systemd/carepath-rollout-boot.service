@@ -1,0 +1,22 @@
+[Unit]
+Description=Recover committed CarePath route without GitHub at boot
+Requires=docker.service
+After=docker.service
+Before=carepath-router.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 -I -B /opt/carepath/carepath_rollout.py boot
+TimeoutStartSec=3min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/carepath-deployer /etc/carepath-router
+InaccessiblePaths=/etc/carepath/github-read-token /etc/carepath/registry /etc/life-compass /etc/life-compass-rollout /var/lib/life-compass-deployer -/etc/h2-backend-tunnel/private -/etc/life-compass-events/private -/etc/carepath-events/private
+
+[Install]
+WantedBy=multi-user.target

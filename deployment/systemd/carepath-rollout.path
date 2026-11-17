@@ -1,0 +1,10 @@
+[Unit]
+Description=Wake fixed CarePath release verifier for queued publication
+
+[Path]
+PathExists=/var/lib/carepath-events/wake
+PathExists=/var/lib/carepath-deployer/event-inflight
+Unit=carepath-rollout.service
+
+[Install]
+WantedBy=multi-user.target

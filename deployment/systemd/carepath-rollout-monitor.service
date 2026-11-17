@@ -1,0 +1,19 @@
+[Unit]
+Description=Monitor CarePath active pair and recover interrupted rollouts
+Requires=carepath-router.service docker.service
+After=carepath-router.service docker.service
+ConditionPathExists=/etc/carepath-rollout/enabled
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 -I -B /opt/carepath/carepath_rollout.py monitor
+TimeoutStartSec=5min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/carepath-deployer /etc/carepath-router
+RestrictSUIDSGID=yes
+InaccessiblePaths=/etc/carepath/github-read-token /etc/carepath/registry /etc/life-compass /etc/life-compass-rollout /var/lib/life-compass-deployer -/etc/h2-backend-tunnel/private -/etc/life-compass-events/private -/etc/carepath-events/private

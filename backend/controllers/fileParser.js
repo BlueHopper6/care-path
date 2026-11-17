@@ -47,13 +47,21 @@ function validateMagicBytes(buffer, claimed) {
 // Store files in memory (no disk writes) — reduced from 10 MB to 5 MB
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5 MB max
+    files: 1,
+    fields: 10,
+    fieldSize: 64 * 1024,
+    parts: 20,
+  },
   fileFilter: (_req, file, cb) => {
     const allowed = ['application/pdf', 'text/plain'];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF and TXT files are supported.'));
+      const err = new Error('Only PDF and TXT files are supported.');
+      err.statusCode = 400;
+      cb(err);
     }
   },
 });
@@ -100,9 +108,9 @@ async function parseFile(req, res) {
       // TXT — just decode the buffer
       text = buffer.toString('utf-8');
     } else if (mimetype === 'application/pdf') {
-      // PDF — extract text with pdf-parse, with a 30-second timeout
+      // PDF — copy into a standalone Uint8Array for pdf-parse/pdf.js compatibility on Node 24+
       const data = await withTimeout(
-        pdfParse(buffer),
+        pdfParse(new Uint8Array(buffer)),
         30000,
         'PDF parsing timed out. The file may be too large or complex.'
       );
@@ -127,9 +135,9 @@ async function parseFile(req, res) {
       },
     });
   } catch (err) {
-    logger.error('File parse error:', { message: err.message, stack: err.stack });
-    // Never expose internal library error messages to the client
     const isTimeout = err.message?.includes('timed out');
+    logger.error('File parse error:', { name: err.name, isTimeout });
+    // Never expose internal library error messages to the client
     return res.status(isTimeout ? 408 : 500).json({
       error: isTimeout
         ? 'PDF parsing timed out. Please try a smaller file.'

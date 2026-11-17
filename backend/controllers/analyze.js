@@ -12,8 +12,7 @@ const logger = require('../utils/logger');
  */
 async function analyzeText(req, res) {
   try {
-    const { raw_text, language } = req.body;
-    const mode = req.query.mode || req.body.mode || 'default';
+    const { raw_text, language, mode } = req.body;
 
     // Run AI analysis
     const analysis = await analyzeMedicalText(raw_text, { mode, language });
@@ -29,8 +28,8 @@ async function analyzeText(req, res) {
       data: analysis,
     });
   } catch (err) {
-    // Log error type only — never log raw medical text (PHI)
-    logger.error('Analyze error:', { name: err.name, message: err.message, stack: err.stack });
+    // Log error type only — never log raw medical text (PHI) or stack traces
+    logger.error('Analyze error:', { name: err.name });
     return res.status(500).json({
       error: 'Failed to analyze medical text.',
       disclaimer: DISCLAIMER,
@@ -92,7 +91,7 @@ async function saveAnalyzedText(req, res) {
 
     return res.status(401).json({ error: 'Unauthorized' });
   } catch (err) {
-    logger.error('Save error:', { name: err.name, message: err.message, stack: err.stack });
+    logger.error('Save error:', { name: err.name });
     return res.status(500).json({ error: 'Failed to save analysis.' });
   }
 }

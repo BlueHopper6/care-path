@@ -131,8 +131,8 @@ async function analyzeMedicalText(rawText, options = {}) {
   try {
     parsed = JSON.parse(cleaned);
   } catch {
-    // Truncate logged response to prevent massive log entries
-    logger.error('Failed to parse Gemini response:', { preview: cleaned.substring(0, 200) });
+    // Log length only — never log model response excerpts that could echo PHI
+    logger.error('Failed to parse Gemini response.', { length: cleaned.length });
     throw new Error('AI returned an invalid response. Please try again.');
   }
 

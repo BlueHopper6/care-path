@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { BackendProxyError, fetchBackend } from "@/lib/backend";
 
 /**
  * GET /api/history
@@ -6,42 +7,24 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function GET(request: NextRequest) {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-    const authHeader = request.headers.get("authorization");
-
-    if (!authHeader) {
+    if (!request.headers.get("authorization")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const page = searchParams.get("page") ?? "1";
-    const limit = searchParams.get("limit") ?? "20";
+    const page = encodeURIComponent(searchParams.get("page") ?? "1");
+    const limit = encodeURIComponent(searchParams.get("limit") ?? "20");
 
-    const response = await fetch(
-      `${apiUrl}/api/history?page=${page}&limit=${limit}`,
-      {
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      throw new Error(errBody.error || `Backend error: ${response.statusText}`);
-    }
-
-    const json = await response.json();
+    const json = await fetchBackend(request, `/api/history?page=${page}&limit=${limit}`);
     return NextResponse.json(json);
   } catch (err) {
-    console.error("[CarePath history route error]", err);
-    return NextResponse.json(
-      {
-        error:
-          err instanceof Error ? err.message : "Failed to fetch history",
-      },
-      { status: 500 }
-    );
+    if (err instanceof BackendProxyError) {
+      return NextResponse.json(
+        { error: err.status < 500 ? err.message : "Failed to fetch history." },
+        { status: err.status }
+      );
+    }
+
+    return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
   }
 }
