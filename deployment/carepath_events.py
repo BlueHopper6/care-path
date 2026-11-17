@@ -132,6 +132,22 @@ def safe_file(path, uid, bound):
         os.close(fd)
 
 
+def read_policy(path, bound=4096):
+    for item in [*reversed(path.parents), path]:
+        info = item.lstat()
+        require(not stat.S_ISLNK(info.st_mode) and info.st_uid == 0 and not info.st_mode & 0o022)
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        info = os.fstat(fd)
+        require(stat.S_ISREG(info.st_mode) and info.st_uid == 0 and info.st_nlink == 1 and not info.st_mode & 0o022 and info.st_size <= bound)
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            raw = stream.read(bound + 1)
+        require(len(raw) <= bound)
+        return parse(raw, bound)
+    finally:
+        os.close(fd)
+
+
 def read_credential(path):
     import errno
     uid = os.geteuid()
@@ -236,7 +252,7 @@ def main():
     cred_dir = os.environ.get("CREDENTIALS_DIRECTORY", "")
     require(cred_dir.startswith("/run/credentials/"))
     secret = read_credential(Path(cred_dir) / "webhook-secret")
-    policy = parse(safe_file(Path("/etc/carepath-events/policy.json"), 0, 4096), 4096)
+    policy = read_policy(Path("/etc/carepath-events/policy.json"), 4096)
     require(set(policy) == {"repositoryId", "workflowId"} and positive(policy["repositoryId"]) and positive(policy["workflowId"]))
     wake_store = WakeStore("/var/lib/carepath-events")
     server = BoundedHTTPServer(("127.0.0.1", 3410), make_handler(secret, policy, wake_store))
