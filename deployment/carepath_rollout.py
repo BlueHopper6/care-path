@@ -230,7 +230,11 @@ def main():
                 "lastAttempt": int(manifest["releaseRunId"]),
             }
             atomic_json(g, g.STATE / "rollout.json", initial)
-            runtime.ensure_route({"generation": 1, "active": record})
+            route = {"generation": 1, "active": record}
+            if runtime.observed_route() is None:
+                runtime.write_route_offline(route)
+            else:
+                runtime.ensure_route(route)
             print("bootstrapped-blue")
         return
 

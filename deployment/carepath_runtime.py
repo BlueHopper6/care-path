@@ -120,7 +120,7 @@ class Runtime:
         self.c.require(
             be[4:11] == ["1001:1001", True, False, None, ["ALL"], None, ["no-new-privileges:true"]]
             and be[11:16] == [536870912, 536870912, 1000000000, 128, net]
-            and be[16] == {}
+            and be[16] in ({}, None)
             and be[17] == {"/tmp": "rw,nosuid,nodev,noexec,size=64m,uid=1001,gid=1001"}
             and be[18] == {"Type": "local", "Config": {"max-size": "10m", "max-file": "3"}}
             and be[19:] == [record["manifest"]["revision"], record["runtimeHash"]],
