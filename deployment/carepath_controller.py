@@ -79,10 +79,9 @@ def record(value, *, candidate=False):
 
 def validate(state):
     require(type(state) is dict, "State must be an object.")
-    require(
-        set(state) == {"schemaVersion", "phase", "generation", "active", "prior", "candidate", "lastAttempt"},
-        "Invalid rollout state keys.",
-    )
+    allowed_keys = {"schemaVersion", "phase", "generation", "active", "prior", "candidate", "lastAttempt", "retired"}
+    required_keys = {"schemaVersion", "phase", "generation", "active", "prior", "candidate", "lastAttempt"}
+    require(required_keys <= set(state) <= allowed_keys, "Invalid rollout state keys.")
     require(state["schemaVersion"] == 1, "Unsupported state schemaVersion.")
     require(
         state["phase"] in {"stable", "preparing", "switching", "retaining", "retiring", "rolling-back", "rolled-back", "recovery-required"},
@@ -97,6 +96,9 @@ def validate(state):
     if state["candidate"] is not None:
         record(state["candidate"], candidate=True)
         require(state["candidate"]["slot"] != state["active"]["slot"], "Candidate and active slots must differ.")
+    if state.get("retired") is not None:
+        record(state["retired"])
+        require(state["retired"]["slot"] != state["active"]["slot"], "Retired and active slots must differ.")
     return state
 
 
@@ -148,7 +150,7 @@ class Controller:
             self.runtime.assert_pair(state["active"], healthy=False)
             if state["prior"]:
                 self.runtime.stop_pair(state["prior"])
-            next_state = {**state, "phase": "stable", "prior": None}
+            next_state = {**state, "phase": "stable", "prior": None, "retired": state["prior"] or state.get("retired")}
             self.runtime.write_route_offline(route_for(next_state))
             return self._save(next_state)
         if state["phase"] == "stable":
@@ -172,7 +174,7 @@ class Controller:
             self.runtime.ensure_route(route_for(state))
             if state["prior"]:
                 self.runtime.stop_pair(state["prior"])
-            return self._save({**state, "phase": "stable", "prior": None})
+            return self._save({**state, "phase": "stable", "prior": None, "retired": state["prior"] or state.get("retired")})
         if state["phase"] == "preparing":
             self.runtime.assert_pair(state["active"], healthy=True)
             self.runtime.ensure_route(route_for(state))
@@ -208,6 +210,7 @@ class Controller:
                 "generation": state["generation"] + 1,
                 "active": state["prior"],
                 "prior": None,
+                "retired": state["active"],
             })
         raise Unsafe("Rollout requires administrator review.")
 
@@ -246,16 +249,18 @@ class Controller:
         state = self._save({**state, "phase": "preparing", "candidate": cand, "lastAttempt": run_num})
 
         try:
-            ids = self.runtime.create_and_start_pair(cand, retired=state["prior"])
+            ids = self.runtime.create_and_start_pair(cand, retired=state.get("retired"))
             cand = {**cand, **ids}
             state = self._save({**state, "candidate": cand})
             self.runtime.wait_ready(cand)
         except Exception:
-            if cand.get("frontendContainer") or cand.get("backendContainer"):
+            if cand.get("frontendContainer") and cand.get("backendContainer"):
                 self.runtime.stop_pair(cand)
+                retired = cand
             else:
                 self.runtime.cleanup_slot(target_slot)
-            self._save({**state, "phase": "stable", "candidate": None})
+                retired = None
+            self._save({**state, "phase": "stable", "candidate": None, "retired": retired})
             return "failed-release-latched"
 
         # Promote candidate atomically in Traefik
@@ -270,6 +275,7 @@ class Controller:
             "active": cand,
             "prior": state["active"],
             "candidate": None,
+            "retired": None,
         })
 
         # Observe candidate health for 30s; roll back once if unhealthy
@@ -285,6 +291,7 @@ class Controller:
                     "generation": state["generation"] + 1,
                     "active": state["prior"],
                     "prior": None,
+                    "retired": state["active"],
                 })
                 return "rolled-back"
             sleep_fn(3)
@@ -293,7 +300,7 @@ class Controller:
         state = self._save({**state, "phase": "retiring"})
         self.runtime.drain(DRAIN_SECONDS)
         self.runtime.stop_pair(state["prior"])
-        self._save({**state, "phase": "stable", "prior": None})
+        self._save({**state, "phase": "stable", "prior": None, "retired": state["prior"]})
         return "promoted-stable"
 
     def rollback(self):
@@ -310,4 +317,5 @@ class Controller:
             "generation": state["generation"] + 1,
             "active": state["prior"],
             "prior": None,
+            "retired": state["active"],
         })

@@ -38,6 +38,7 @@ class FakeRuntime:
     def __init__(self):
         self.route_hash_value = None
         self.running = {"blue"}
+        self.stopped = set()
         self.fail_ready = False
         self.fail_probe_after_switch = False
         self.stopped_slots = []
@@ -77,6 +78,10 @@ class FakeRuntime:
 
     def create_and_start_pair(self, record, *, retired=None):
         slot = record["slot"]
+        if slot in self.stopped:
+            if not retired or retired["slot"] != slot:
+                raise ctrl.Unsafe("Stopped container in slot without matching retired record.")
+            self.stopped.discard(slot)
         self.running.add(slot)
         rev = record["manifest"]["revision"][0]
         slot_hex = "e" if slot == "blue" else "f"
@@ -94,10 +99,12 @@ class FakeRuntime:
 
     def stop_pair(self, record):
         self.running.discard(record["slot"])
+        self.stopped.add(record["slot"])
         self.stopped_slots.append(record["slot"])
 
     def cleanup_slot(self, slot):
         self.running.discard(slot)
+        self.stopped.discard(slot)
         self.cleaned_slots.append(slot)
 
 
@@ -164,6 +171,12 @@ class CarePathControllerTests(unittest.TestCase):
         # Same failed run ID is not retried in a loop
         self.assertEqual(c.deploy(make_manifest(200, "b"), lambda: None, sleep), "unchanged")
 
+        # Subsequent healthy release reuses the retired failed slot cleanly
+        rt.fail_ready = False
+        res2 = c.deploy(make_manifest(250, "c"), lambda: None, sleep)
+        self.assertEqual(res2, "promoted-stable")
+        self.assertEqual(box[0]["active"]["slot"], "green")
+
     def test_observation_failure_rolls_back_to_prior_slot(self):
         initial = {
             "schemaVersion": 1,
@@ -183,6 +196,12 @@ class CarePathControllerTests(unittest.TestCase):
         self.assertEqual(box[0]["generation"], 3)
         self.assertEqual(rt.stopped_slots, ["green"])
         self.assertEqual(rt.route_hash_value, rt.route_hash({"generation": 3, "active": box[0]["active"]}))
+
+        # Subsequent release reuses the stopped rolled-back slot cleanly
+        rt.fail_probe_after_switch = False
+        res2 = c.deploy(make_manifest(250, "c"), lambda: None, sleep)
+        self.assertEqual(res2, "promoted-stable")
+        self.assertEqual(box[0]["active"]["slot"], "green")
 
     def test_boot_offline_recovers_interrupted_switching(self):
         blue = make_record("blue", 100, "a")

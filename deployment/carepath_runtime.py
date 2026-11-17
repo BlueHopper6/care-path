@@ -158,10 +158,13 @@ class Runtime:
         self._ensure_network(slot)
         net = NETWORKS[slot]
 
-        for name in (BACKEND_NAMES[slot], FRONTEND_NAMES[slot]):
-            existing = self._inspect_container(name)
-            if existing:
-                self.c.require(retired and retired["slot"] == slot and existing[2] is False, f"Unmanaged or running container {name} present.")
+        existing_names = [name for name in (BACKEND_NAMES[slot], FRONTEND_NAMES[slot]) if self._inspect_container(name)]
+        if existing_names:
+            self.c.require(retired and retired["slot"] == slot, f"Unmanaged container(s) present in {slot} slot.")
+            self.assert_pair(retired, healthy=False)
+            for name in existing_names:
+                info = self._inspect_container(name)
+                self.c.require(info[2] is False, f"Retired container {name} is unexpectedly running.")
                 self.docker.call("container", "rm", name)
 
         revision = record["manifest"]["revision"]
